@@ -11,6 +11,8 @@ const { sequelize } = require('../config/db');
  *   get:
  *     summary: Overdue reports
  *     tags: [Escalation]
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -19,6 +21,13 @@ const { sequelize } = require('../config/db');
  *   post:
  *     summary: Manual Escalation
  *     tags: [Escalation]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -27,6 +36,8 @@ const { sequelize } = require('../config/db');
  *   post:
  *     summary: Trigger System Escalation
  *     tags: [Escalation]
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -35,6 +46,8 @@ const { sequelize } = require('../config/db');
  *   get:
  *     summary: Central Monitoring Feed
  *     tags: [Escalation]
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -43,7 +56,15 @@ const { sequelize } = require('../config/db');
  *   get:
  *     summary: Audit trail
  *     tags: [Escalation]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
  */
+
 
 router.get('/pending', protect, authorize('admin', 'department_head'), async (req, res) => {
   const overdue = await Complaint.findAll({ where: { deadline: { [Op.lt]: new Date() } } });

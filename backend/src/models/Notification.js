@@ -33,8 +33,10 @@ const Notification = sequelize.define('Notification', {
     }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'notifications'
 });
+
 
 Notification.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Notification, { foreignKey: 'userId' });

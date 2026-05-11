@@ -10,7 +10,7 @@ const Comment = sequelize.define('Comment', {
   complaintId: { type: DataTypes.CHAR(36), allowNull: false, references: { model: Complaint, key: 'id' } }
 }, { 
   timestamps: true,
-  tableName: 'Community_Interactions'
+  tableName: 'comments'
 });
 
 Comment.belongsTo(User, { foreignKey: 'userId' });

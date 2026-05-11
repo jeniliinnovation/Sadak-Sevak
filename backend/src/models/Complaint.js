@@ -86,8 +86,10 @@ const Complaint = sequelize.define('Complaint', {
     allowNull: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'complaints'
 });
+
 
 // Associations
 Complaint.belongsTo(User, { as: 'citizen', foreignKey: 'citizenId' });

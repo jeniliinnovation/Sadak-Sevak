@@ -29,7 +29,7 @@ const EscalationLog = sequelize.define('EscalationLog', {
   }
 }, {
   timestamps: true,
-  tableName: 'Escalation'
+  tableName: 'escalation'
 });
 
 EscalationLog.belongsTo(Complaint, { foreignKey: 'complaintId' });

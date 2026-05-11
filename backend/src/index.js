@@ -48,6 +48,10 @@ require('./models/EscalationLog');
 require('./models/AIResult');
 const { Like, Confirmation } = require('./models/Interactions');
 require('./models/MissingModules');
+require('./models/Area');
+require('./models/AdminModels');
+
+
 
 const app = express();
 
@@ -67,6 +71,12 @@ app.use('/api/media', require('./routes/media'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/escalation', require('./routes/escalation'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api', require('./routes/interactions'));
+app.use('/api/roles', require('./routes/roles'));
+app.use('/api/summary', require('./routes/summary'));
+app.use('/api/areas', require('./routes/areas'));
+
+
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

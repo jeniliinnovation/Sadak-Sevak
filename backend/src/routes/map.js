@@ -1,7 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const Complaint = require('../models/Complaint');
+const { LiveMap } = require('../models/MissingModules');
 const { Op } = require('sequelize');
+
+/**
+ * @swagger
+ * /api/map/live:
+ *   get:
+ *     summary: Get live map configuration
+ *     tags: [Map]
+ */
+router.get('/live', async (req, res) => {
+  const data = await LiveMap.findAll();
+  res.json(data);
+});
+
 
 /**
  * @swagger
@@ -30,6 +44,37 @@ const { Op } = require('sequelize');
  *       200: { description: OK }
  */
 
+/**
+ * @swagger
+
+ * /api/map/summary:
+ *   get:
+ *     summary: Get complaints summary by Area/Zone
+ *     tags: [Map]
+ *     responses:
+ *       200: { description: OK }
+ */
+router.get('/summary', async (req, res) => {
+  try {
+    const complaints = await Complaint.findAll({ attributes: ['location'] });
+    
+    const summary = {
+      byZone: {},
+      byWard: {},
+      byArea: {}
+    };
+
+    complaints.forEach(c => {
+      const loc = c.location;
+      if (loc.zone) summary.byZone[loc.zone] = (summary.byZone[loc.zone] || 0) + 1;
+      if (loc.ward) summary.byWard[loc.ward] = (summary.byWard[loc.ward] || 0) + 1;
+      if (loc.area) summary.byArea[loc.area] = (summary.byArea[loc.area] || 0) + 1;
+    });
+
+    res.json(summary);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
 router.get('/complaints', async (req, res) => {
   const pins = await Complaint.findAll({ attributes: ['id', 'location'] });
   res.json(pins);
@@ -40,3 +85,4 @@ router.get('/zone/:lat/:lng', (req, res) => {
 });
 
 module.exports = router;
+

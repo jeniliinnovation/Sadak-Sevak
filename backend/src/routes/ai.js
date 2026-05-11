@@ -19,6 +19,8 @@ const { protect, authorize } = require('../middleware/auth');
  *             type: object
  *             properties:
  *               complaintId: { type: string, example: "uuid-here" }
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -47,7 +49,10 @@ const { protect, authorize } = require('../middleware/auth');
  *         name: id
  *         required: true
  *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
  */
+
 
 router.post('/analyze', protect, async (req, res) => {
   const { complaintId } = req.body;

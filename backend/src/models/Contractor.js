@@ -19,7 +19,9 @@ const Contractor = sequelize.define('Contractor', {
     defaultValue: 5.0
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'contractors'
 });
+
 
 module.exports = Contractor;

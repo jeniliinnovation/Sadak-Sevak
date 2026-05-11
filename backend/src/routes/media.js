@@ -11,6 +11,8 @@ const { protect, authorize } = require('../middleware/auth');
  *     tags: [Media Upload]
  *     security:
  *       - bearerAuth: []
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -21,6 +23,8 @@ const { protect, authorize } = require('../middleware/auth');
  *     tags: [Media Upload]
  *     security:
  *       - bearerAuth: []
+ *     responses:
+ *       200: { description: OK }
  */
 
 /**
@@ -31,7 +35,15 @@ const { protect, authorize } = require('../middleware/auth');
  *     tags: [Media Upload]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: mediaId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
  */
+
 
 router.post('/upload', protect, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });

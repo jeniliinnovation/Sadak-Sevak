@@ -8,7 +8,7 @@ const router = express.Router();
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Register a new user
+ *     summary: Register a new citizen
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -30,7 +30,7 @@ const router = express.Router();
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Login user
+ *     summary: User login
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -48,14 +48,47 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/auth/me:
+ * /api/auth/verify-otp:
+ *   post:
+ *     summary: Verify OTP
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email: { type: string, example: "john@gmail.com" }
+ *               otp: { type: string, example: "123456" }
+ *     responses:
+ *       200: { description: OTP Verified }
+ *       400: { description: Invalid OTP }
+ */
+
+/**
+ * @swagger
+ * /api/auth/profile:
  *   get:
- *     summary: Get current profile
+ *     summary: Get user profile
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200: { description: Profile data }
+ */
+
+/**
+ * @swagger
+ * /api/auth/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200: { description: List of users }
  */
 
 router.post('/register', async (req, res) => {
@@ -78,7 +111,30 @@ router.post('/login', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-const { protect } = require('../middleware/auth');
-router.get('/me', protect, async (req, res) => { res.json(req.user); });
+router.post('/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  // Mock OTP verification
+  if (otp === '123456') {
+    res.json({ message: 'OTP Verified successfully' });
+  } else {
+    res.status(400).json({ error: 'Invalid or expired OTP' });
+  }
+});
+
+const { protect, authorize } = require('../middleware/auth');
+
+router.get('/profile', protect, async (req, res) => { 
+  res.json(req.user); 
+});
+
+router.get('/users', protect, authorize('admin'), async (req, res) => {
+  try {
+    const users = await User.findAll({ attributes: { exclude: ['password'] } });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;
+

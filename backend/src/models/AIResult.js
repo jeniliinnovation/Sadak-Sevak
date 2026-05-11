@@ -22,7 +22,7 @@ const AIResult = sequelize.define('AIResult', {
   }
 }, { 
   timestamps: true,
-  tableName: 'AI_Analysis'
+  tableName: 'ai_analysis'
 });
 
 AIResult.belongsTo(Complaint, { foreignKey: 'complaintId' });

@@ -9,7 +9,10 @@ const Like = sequelize.define('Like', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  tableName: 'likes'
+});
 
 const Confirmation = sequelize.define('Confirmation', {
   id: {
@@ -19,8 +22,10 @@ const Confirmation = sequelize.define('Confirmation', {
   }
 }, { 
   timestamps: true,
-  tableName: 'Community_Interactions'
+  tableName: 'confirmations'
 });
+
+
 
 // Associations
 Like.belongsTo(User);
