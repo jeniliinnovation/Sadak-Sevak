@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation/Artifacts (Optional: remove if you want to track them)
+*.docx
+*.zip
+workflow_content/
+scratch/
+
+# Build files
+dist/
+build/
