@@ -4,6 +4,17 @@ Powerful backend infrastructure for the Road Maintenance and Citizen Reporting p
 
 ## 🚀 Recent Updates (Today)
 
+### 📊 Before vs. After
+| Feature | Previous State | Current State (Improved) |
+| :--- | :--- | :--- |
+| **API Endpoints** | ~15 basic stubs | **62 full features** (Complete Logic) |
+| **Documentation** | Minimal Swagger (titles only) | **High-Fidelity Swagger** (Schemas/Examples) |
+| **Authentication** | Basic Login/Register | **Full Auth Flow** (Google/Apple/OTP/Reset) |
+| **Roles/RBAC** | Hardcoded citizen logic | **Advanced RBAC** (Admin/Team/Citizen/Head) |
+| **Database** | Conflicting table names/types | **Clean UUID Schema** (CHAR 36) |
+| **Testing** | No automated tests | **Jest/Supertest Suite** Integrated |
+| **Media** | No working upload | **Multipart Binary Upload** (S3/Cloudinary ready) |
+
 ### 1. API Implementation (62 Endpoints Complete)
 - **Authentication**: Fully implemented Register, Login, Logout, Profile (Get/Update), Password Reset, and Token Refresh.
 - **Complaints**: Created a robust lifecycle including Submission, Nearby Search, Verification (Citizen-led), Reopening, and Status Tracking.
