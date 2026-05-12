@@ -17,42 +17,20 @@ const { protect, authorize } = require('../middleware/auth');
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [complaintId]
  *             properties:
- *               complaintId: { type: string, example: "uuid-here" }
+ *               complaintId: { type: string, example: "complaint-uuid-123" }
  *     responses:
- *       200: { description: OK }
+ *       200:
+ *         description: Analysis complete
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 results: { type: object }
  */
-
-/**
- * @swagger
- * /api/ai/score/{id}:
- *   get:
- *     summary: Get Road Health Score
- *     tags: [AI Analysis]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200: { description: OK }
- */
-
-/**
- * @swagger
- * /api/ai/severity/{id}:
- *   get:
- *     summary: Get Damage Severity
- *     tags: [AI Analysis]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200: { description: OK }
- */
-
 
 router.post('/analyze', protect, async (req, res) => {
   const { complaintId } = req.body;

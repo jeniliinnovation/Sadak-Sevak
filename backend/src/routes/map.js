@@ -10,49 +10,31 @@ const { Op } = require('sequelize');
  *   get:
  *     summary: Get live map configuration
  *     tags: [Map]
+ *     responses:
+ *       200: { description: OK }
  */
 router.get('/live', async (req, res) => {
   const data = await LiveMap.findAll();
   res.json(data);
 });
 
-
 /**
  * @swagger
- * /api/map/complaints:
- *   get:
- *     summary: Geo-pins feed
- *     tags: [Map]
- */
-
-/**
- * @swagger
- * /api/map/zone/{lat}/{lng}:
- *   get:
- *     summary: Zone status check
- *     tags: [Map]
- *     parameters:
- *       - in: path
- *         name: lat
- *         required: true
- *         schema: { type: number, example: 19.0760 }
- *       - in: path
- *         name: lng
- *         required: true
- *         schema: { type: number, example: 72.8777 }
- *     responses:
- *       200: { description: OK }
- */
-
-/**
- * @swagger
-
  * /api/map/summary:
  *   get:
  *     summary: Get complaints summary by Area/Zone
  *     tags: [Map]
  *     responses:
- *       200: { description: OK }
+ *       200:
+ *         description: OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 byZone: { type: object }
+ *                 byWard: { type: object }
+ *                 byArea: { type: object }
  */
 router.get('/summary', async (req, res) => {
   try {
@@ -75,14 +57,46 @@ router.get('/summary', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+/**
+ * @swagger
+ * /api/map/complaints:
+ *   get:
+ *     summary: Get geo-pins for all complaints
+ *     tags: [Map]
+ *     responses:
+ *       200:
+ *         description: OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { type: object }
+ */
 router.get('/complaints', async (req, res) => {
   const pins = await Complaint.findAll({ attributes: ['id', 'location'] });
   res.json(pins);
 });
 
+/**
+ * @swagger
+ * /api/map/zone/{lat}/{lng}:
+ *   get:
+ *     summary: Zone status check
+ *     tags: [Map]
+ *     parameters:
+ *       - in: path
+ *         name: lat
+ *         required: true
+ *         schema: { type: number, example: 19.0760 }
+ *       - in: path
+ *         name: lng
+ *         required: true
+ *         schema: { type: number, example: 72.8777 }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/zone/:lat/:lng', (req, res) => {
   res.json({ zone: 'moderate', lat: req.params.lat, lng: req.params.lng });
 });
 
 module.exports = router;
-

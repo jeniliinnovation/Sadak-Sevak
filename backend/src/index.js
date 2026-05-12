@@ -92,8 +92,10 @@ const startServer = async () => {
   try {
     await connectDB();
     
-    // Simple sync to avoid "Too many keys" error
+    // Disable foreign key checks for sync
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
     await sequelize.sync();
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
     console.log('Database synced');
 
     app.listen(PORT, () => {

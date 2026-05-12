@@ -7,19 +7,29 @@ const { protect, authorize } = require('../middleware/auth');
  * @swagger
  * /api/notifications:
  *   get:
- *     summary: All Alerts
+ *     summary: Get all notifications for current user
  *     tags: [Notifications]
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200: { description: OK }
+ *       200:
+ *         description: List of notifications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { type: object }
  */
+router.get('/', protect, async (req, res) => {
+  const alerts = await Notification.findAll({ where: { userId: req.user.id } });
+  res.json(alerts);
+});
 
 /**
  * @swagger
  * /api/notifications/{id}/read:
  *   put:
- *     summary: Mark single read
+ *     summary: Mark a single notification as read
  *     tags: [Notifications]
  *     security:
  *       - bearerAuth: []
@@ -31,13 +41,6 @@ const { protect, authorize } = require('../middleware/auth');
  *     responses:
  *       200: { description: OK }
  */
-
-
-router.get('/', protect, async (req, res) => {
-  const alerts = await Notification.findAll({ where: { userId: req.user.id } });
-  res.json(alerts);
-});
-
 router.put('/:id/read', protect, async (req, res) => {
   const alert = await Notification.findOne({ where: { id: req.params.id, userId: req.user.id } });
   if (alert) { alert.isRead = true; await alert.save(); }

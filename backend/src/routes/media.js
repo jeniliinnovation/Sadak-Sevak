@@ -11,18 +11,46 @@ const { protect, authorize } = require('../middleware/auth');
  *     tags: [Media Upload]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
  *     responses:
- *       200: { description: OK }
+ *       200: 
+ *         description: OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url: { type: string }
+ *                 public_id: { type: string }
  */
 
 /**
  * @swagger
  * /api/media/repair-proof:
  *   post:
- *     summary: Upload repair proof
+ *     summary: Upload repair proof (Team/Admin only)
  *     tags: [Media Upload]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200: { description: OK }
  */

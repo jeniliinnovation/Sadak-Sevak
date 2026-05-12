@@ -9,11 +9,18 @@ const { sequelize } = require('../config/db');
  * @swagger
  * /api/escalation/pending:
  *   get:
- *     summary: Overdue reports
+ *     summary: Get overdue reports
  *     tags: [Escalation]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
- *       200: { description: OK }
+ *       200:
+ *         description: List of overdue complaints
  */
+router.get('/pending', protect, authorize('admin', 'department_head'), async (req, res) => {
+  const overdue = await Complaint.findAll({ where: { deadline: { [Op.lt]: new Date() } } });
+  res.json(overdue);
+});
 
 /**
  * @swagger
@@ -21,6 +28,8 @@ const { sequelize } = require('../config/db');
  *   post:
  *     summary: Manual Escalation
  *     tags: [Escalation]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -29,6 +38,7 @@ const { sequelize } = require('../config/db');
  *     responses:
  *       200: { description: OK }
  */
+router.post('/:id', protect, authorize('admin', 'department_head'), (req, res) => { res.json({ message: 'Escalated' }); });
 
 /**
  * @swagger
@@ -36,9 +46,12 @@ const { sequelize } = require('../config/db');
  *   post:
  *     summary: Trigger System Escalation
  *     tags: [Escalation]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200: { description: OK }
  */
+router.post('/auto', protect, authorize('admin'), (req, res) => { res.json({ message: 'Auto triggered' }); });
 
 /**
  * @swagger
@@ -46,16 +59,21 @@ const { sequelize } = require('../config/db');
  *   get:
  *     summary: Central Monitoring Feed
  *     tags: [Escalation]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200: { description: OK }
  */
+router.get('/central', protect, authorize('admin'), (req, res) => { res.json([]); });
 
 /**
  * @swagger
  * /api/escalation/history/{id}:
  *   get:
- *     summary: Audit trail
+ *     summary: View audit trail for a complaint
  *     tags: [Escalation]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -64,16 +82,6 @@ const { sequelize } = require('../config/db');
  *     responses:
  *       200: { description: OK }
  */
-
-
-router.get('/pending', protect, authorize('admin', 'department_head'), async (req, res) => {
-  const overdue = await Complaint.findAll({ where: { deadline: { [Op.lt]: new Date() } } });
-  res.json(overdue);
-});
-
-router.post('/:id', protect, authorize('admin', 'department_head'), (req, res) => { res.json({ message: 'Escalated' }); });
-router.post('/auto', protect, authorize('admin'), (req, res) => { res.json({ message: 'Auto triggered' }); });
-router.get('/central', protect, authorize('admin'), (req, res) => { res.json([]); });
 router.get('/history/:id', protect, (req, res) => { res.json([]); });
 
 module.exports = router;

@@ -131,6 +131,121 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   res.json({ message: 'Deleted' });
 });
 
+/**
+ * @swagger
+ * /api/complaints/my:
+ *   get:
+ *     summary: Get my complaints
+ *     tags: [Complaints]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of complaints
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { type: object }
+ */
+router.get('/my', protect, async (req, res) => {
+  try {
+    const complaints = await Complaint.findAll({ where: { citizenId: req.user.id } });
+    res.json(complaints);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+/**
+ * @swagger
+ * /api/complaints/{id}/verify:
+ *   post:
+ *     summary: Verify repair completion
+ *     tags: [Complaints]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Verified and closed }
+ */
+router.post('/:id/verify', protect, authorize('citizen'), async (req, res) => {
+  try {
+    const complaint = await Complaint.findByPk(req.params.id);
+    if (!complaint) return res.status(404).json({ error: 'Not found' });
+    if (complaint.citizenId !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+    
+    complaint.status = 'verified_closed';
+    await complaint.save();
+    res.json({ message: 'Complaint verified and closed', complaint });
+  } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+/**
+ * @swagger
+ * /api/complaints/{id}/reopen:
+ *   post:
+ *     summary: Reopen a closed complaint
+ *     tags: [Complaints]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Reopened }
+ */
+router.post('/:id/reopen', protect, authorize('citizen'), async (req, res) => {
+  try {
+    const complaint = await Complaint.findByPk(req.params.id);
+    if (!complaint) return res.status(404).json({ error: 'Not found' });
+    if (complaint.citizenId !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+    
+    complaint.status = 'reopened';
+    await complaint.save();
+    res.json({ message: 'Complaint reopened', complaint });
+  } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+/**
+ * @swagger
+ * /api/complaints/nearby:
+ *   get:
+ *     summary: Get nearby complaints
+ *     tags: [Complaints]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema: { type: number, example: 19.0760 }
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema: { type: number, example: 72.8777 }
+ *       - in: query
+ *         name: radius
+ *         schema: { type: number, default: 5, example: 10 }
+ *     responses:
+ *       200:
+ *         description: List of nearby complaints
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { type: object }
+ */
+router.get('/nearby', async (req, res) => {
+  try {
+    // Simple mock for now, returning all as nearby
+    const complaints = await Complaint.findAll();
+    res.json(complaints);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
 router.get('/', async (req, res) => {
   const complaints = await Complaint.findAll({ include: [{ model: User, as: 'citizen', attributes: ['name'] }] });
   res.json(complaints);
