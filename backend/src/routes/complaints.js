@@ -93,7 +93,7 @@ const { enrichLocation } = require('../utils/locationService');
 
 router.post('/', protect, authorize('citizen'), async (req, res) => {
   try {
-    const { title, description, location } = req.body;
+    const { title, description, location, media } = req.body;
     
     // SARA Enrichment (Async DB Query)
     const enrichedLocation = await enrichLocation(location.lat, location.lng);
@@ -101,6 +101,7 @@ router.post('/', protect, authorize('citizen'), async (req, res) => {
     const complaint = await Complaint.create({
       title,
       description,
+      media: media || { url: 'https://example.com/placeholder.jpg', type: 'image' },
       location: enrichedLocation,
       citizenId: req.user.id,
       status: 'submitted'

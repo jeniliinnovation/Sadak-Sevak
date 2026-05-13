@@ -3,6 +3,7 @@ const router = express.Router();
 const { Like, Confirmation } = require('../models/Interactions');
 const Comment = require('../models/Comment');
 const Complaint = require('../models/Complaint');
+const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
 
 /**
