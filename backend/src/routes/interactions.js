@@ -33,9 +33,7 @@ router.post('/complaints/:id/like', protect, authorize('citizen'), async (req, r
       await Complaint.increment('likesCount', { where: { id: complaintId } });
       res.json({ message: 'Liked' });
     } else {
-      await Like.destroy({ where: { userId: req.user.id, complaintId } });
-      await Complaint.decrement('likesCount', { where: { id: complaintId } });
-      res.json({ message: 'Unliked' });
+      res.status(400).json({ message: 'Already liked' });
     }
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
@@ -110,13 +108,13 @@ router.get('/complaints/:id/comments', async (req, res) => {
   try {
     const comments = await Comment.findAll({ 
       where: { complaintId: req.params.id },
-      include: [{ model: User, attributes: ['name', 'avatar'] }]
+      include: [{ model: User, attributes: ['name', 'avatar', 'role'] }]
     });
     res.json(comments);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-router.post('/complaints/:id/comments', protect, authorize('citizen'), async (req, res) => {
+router.post('/complaints/:id/comments', protect, authorize('citizen', 'government', 'department_head', 'team_member', 'admin'), async (req, res) => {
   try {
     const { content } = req.body;
     const comment = await Comment.create({
@@ -124,7 +122,17 @@ router.post('/complaints/:id/comments', protect, authorize('citizen'), async (re
       complaintId: req.params.id,
       userId: req.user.id
     });
-    res.status(201).json(comment);
+
+    const fullComment = await Comment.findByPk(comment.id, {
+      include: [{ model: User, attributes: ['name', 'avatar', 'role'] }]
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(req.params.id).emit('newMessage', fullComment);
+    }
+
+    res.status(201).json(fullComment);
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 

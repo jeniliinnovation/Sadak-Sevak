@@ -1,0 +1,288 @@
+import 'package:flutter/material.dart';
+import 'package:animate_do/animate_do.dart';
+import 'task_details_screen.dart';
+import '../../../complaints/domain/complaint_model.dart';
+import '../../../government/data/government_repository.dart';
+
+class MyTasksScreen extends StatefulWidget {
+  const MyTasksScreen({super.key});
+
+  @override
+  State<MyTasksScreen> createState() => _MyTasksScreenState();
+}
+
+class _MyTasksScreenState extends State<MyTasksScreen> {
+  String _selectedFilter = 'All';
+  final _repository = GovernmentRepository();
+  List<Complaint> _complaints = [];
+  bool _isLoading = true;
+
+  static const Color _blue = Color(0xFF4A80F0);
+  static const Color _darkBlue = Color(0xFF0D47A1);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComplaints();
+  }
+
+  Future<void> _loadComplaints() async {
+    try {
+      final list = await _repository.getComplaints();
+      if (mounted) {
+        setState(() {
+          _complaints = list;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  List<Complaint> get _filtered {
+    if (_selectedFilter == 'All') return _complaints;
+    if (_selectedFilter == 'Pending') {
+      return _complaints.where((c) {
+        final status = c.status.toLowerCase();
+        return status == 'submitted' || status == 'pending' || status == 'under_review';
+      }).toList();
+    }
+    if (_selectedFilter == 'In Progress') {
+      return _complaints.where((c) {
+        final status = c.status.toLowerCase();
+        return status == 'repair_started' || status == 'team_assigned';
+      }).toList();
+    }
+    // Completed
+    return _complaints.where((c) {
+      final status = c.status.toLowerCase();
+      return status == 'repair_completed' || status == 'verified_closed';
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F9FF),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        title: const Text('My Tasks',
+            style: TextStyle(
+                color: _darkBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 20)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: _darkBlue),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _loadComplaints();
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Filter chips
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _chip('All'),
+                  const SizedBox(width: 10),
+                  _chip('Pending'),
+                  const SizedBox(width: 10),
+                  _chip('In Progress'),
+                  const SizedBox(width: 10),
+                  _chip('Completed'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: _blue))
+                : _filtered.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No tasks found for "$_selectedFilter".',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        itemCount: _filtered.length,
+                        itemBuilder: (context, i) {
+                          final t = _filtered[i];
+                          return FadeInUp(
+                            key: ValueKey(t.id),
+                            delay: Duration(milliseconds: i * 60),
+                            child: _taskCard(context, t),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label) {
+    final selected = _selectedFilter == label;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = label),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? _blue : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? _blue : Colors.grey.shade200),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                      color: _blue.withOpacity(0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3))
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.grey.shade600,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _taskCard(BuildContext context, Complaint complaint) {
+    IconData icon;
+    switch (complaint.category.toLowerCase()) {
+      case 'potholes':
+      case 'pothole':
+        icon = Icons.radio_button_unchecked;
+        break;
+      case 'street light':
+      case 'lighting':
+        icon = Icons.lightbulb_outline;
+        break;
+      case 'drainage':
+      case 'sewage':
+        icon = Icons.water_damage_outlined;
+        break;
+      default:
+        icon = Icons.report_problem_outlined;
+    }
+
+    Color priorityColor;
+    switch (complaint.priority.toLowerCase()) {
+      case 'critical':
+      case 'high':
+        priorityColor = Colors.red;
+        break;
+      case 'medium':
+        priorityColor = Colors.orange;
+        break;
+      default:
+        priorityColor = Colors.green;
+    }
+
+    String status = 'Pending';
+    Color statusColor = const Color(0xFFE67E00);
+    Color statusBg = const Color(0xFFFFF3E0);
+
+    if (complaint.status == 'repair_started') {
+      status = 'In Progress';
+      statusColor = _blue;
+      statusBg = const Color(0xFFEEF3FF);
+    } else if (complaint.status == 'repair_completed' || complaint.status == 'verified_closed') {
+      status = 'Completed';
+      statusColor = Colors.green;
+      statusBg = Colors.green.shade50;
+    }
+
+    final address = complaint.location['address'] ?? 'Unknown Location';
+
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => TaskDetailsScreen(complaint: complaint))),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3))
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                  color: const Color(0xFFEEF3FF),
+                  borderRadius: BorderRadius.circular(12)),
+              child:
+                  Icon(icon, color: _blue, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(complaint.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF1A1A2E))),
+                  const SizedBox(height: 2),
+                  Text(address,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text('${complaint.priority} Priority',
+                      style: TextStyle(
+                          color: priorityColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(8)),
+              child: Text(status,
+                  style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

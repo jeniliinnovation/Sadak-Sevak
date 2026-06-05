@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Complaint = require('../models/Complaint');
 const Contractor = require('../models/Contractor');
+const User = require('../models/User');
 const { GovernmentAdmin, RolesLegend, SummaryTable } = require('../models/AdminModels');
 const { protect, authorize } = require('../middleware/auth');
+const { Op } = require('sequelize');
 
 /**
  * @swagger
@@ -107,7 +109,7 @@ const { protect, authorize } = require('../middleware/auth');
  *               type: array
  *               items: { type: object }
  */
-router.get('/complaints', protect, authorize('admin', 'department_head'), async (req, res) => {
+router.get('/complaints', protect, async (req, res) => {
   const complaints = await Complaint.findAll();
   res.json(complaints);
 });
@@ -241,6 +243,28 @@ router.get('/summary', protect, async (req, res) => {
  *     responses:
  *       200: { description: User deleted }
  */
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Get all government staff users
+ *     tags: [Government / Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of government staff users
+ */
+router.get('/users', protect, async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: { exclude: ['password', 'otp', 'googleId', 'appleId'] },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(users);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
 router.put('/users/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);

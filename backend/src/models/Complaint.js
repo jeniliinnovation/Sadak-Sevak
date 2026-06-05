@@ -20,6 +20,14 @@ const Complaint = sequelize.define('Complaint', {
     type: DataTypes.JSON, // { url, public_id, type }
     allowNull: false
   },
+  category: {
+    type: DataTypes.STRING,
+    defaultValue: 'General'
+  },
+  priority: {
+    type: DataTypes.ENUM('Low', 'Medium', 'High', 'Critical'),
+    defaultValue: 'Medium'
+  },
   location: {
     type: DataTypes.JSON, // { type, coordinates, address, area, zone }
     allowNull: false

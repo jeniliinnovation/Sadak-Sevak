@@ -75,12 +75,22 @@ const { protect, authorize } = require('../middleware/auth');
 
 router.post('/upload', protect, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  res.json({ url: req.file.path, public_id: req.file.filename });
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const filePath = req.file.path.replace(/\\/g, '/');
+  res.json({ 
+    url: `${baseUrl}/${filePath}`, 
+    public_id: req.file.filename 
+  });
 });
 
 router.post('/repair-proof', protect, authorize('team_member', 'admin'), upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  res.json({ url: req.file.path, public_id: req.file.filename });
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const filePath = req.file.path.replace(/\\/g, '/');
+  res.json({ 
+    url: `${baseUrl}/${filePath}`, 
+    public_id: req.file.filename 
+  });
 });
 
 router.delete('/:mediaId', protect, (req, res) => {

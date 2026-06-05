@@ -39,12 +39,13 @@ const enrichLocation = async (lat, lng) => {
   }
 
   return {
-    latitude: lat,
-    longitude: lng,
+    lat: lat,
+    lng: lng,
     zone: detectedZone,
     ward: detectedWard,
     area: detectedArea,
-    fullAddress: `SARA Verified location near ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    address: `Verified location near Rajkot (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+    fullAddress: `Verified location near Rajkot (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
     timestamp: new Date()
   };
 };

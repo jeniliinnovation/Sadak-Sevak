@@ -21,7 +21,7 @@ const { protect, authorize } = require('../middleware/auth');
  *               items: { type: object }
  */
 router.get('/', protect, async (req, res) => {
-  const alerts = await Notification.findAll({ where: { userId: req.user.id } });
+  const alerts = await Notification.findAll();
   res.json(alerts);
 });
 
