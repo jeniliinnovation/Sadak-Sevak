@@ -2,7 +2,13 @@
 
 Sadak-Sevak is an advanced road maintenance and complaint management platform designed for citizens and government administrators. It features an intelligent **SARA (Smart Area Road Assessment)** system and a robust **17-table database architecture**.
 
-## 🚀 Recent Updates (May 13, 2026)
+## 🚀 Recent Updates (June 2026)
+- **Citizen App Expansion**: Added comprehensive Government Portal and Field Team interfaces in the Flutter app (`citizen_app`).
+- **Government Portal**: Analytics dashboard, real-time complaint management, contractor oversight, and field operations tracking.
+- **Field Team Interface**: Task assignment, reporting, offline mode support, and data synchronization for on-ground staff.
+- **Backend Enhancements**: Updated backend routes and models to fully support the new app interfaces and real-time sockets.
+
+## 🚀 Previous Updates (May 13, 2026)
 - **Comprehensive Testing Suite**: Implemented **43 functional API tests** with 100% pass rate.
 - **Each API Module Covered**: Dedicated test files for all 13 route modules including Auth, Complaints, Admin, AI, and Analytics.
 - **Infrastructure Fixes**: Resolved critical model association bugs and schema synchronization issues during testing.
