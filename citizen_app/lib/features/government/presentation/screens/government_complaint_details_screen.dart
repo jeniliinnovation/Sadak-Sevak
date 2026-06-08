@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sadak_sevak_citizen/features/auth/domain/user_model.dart';
 import 'package:sadak_sevak_citizen/features/complaints/domain/complaint_model.dart';
 import 'package:sadak_sevak_citizen/features/government/data/government_repository.dart';
 import 'package:sadak_sevak_citizen/features/complaints/presentation/screens/complaint_chat_screen.dart';
@@ -19,51 +22,100 @@ class GovernmentComplaintDetailsScreen extends StatefulWidget {
 class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDetailsScreen> {
   final GovernmentRepository _repository = GovernmentRepository();
   late Complaint _complaint;
+  List<User> _teamUsers = [];
 
-  static const _teams = [
-    'Team Alpha',
-    'Team Beta',
-    'Team Gamma',
-    'Team Delta',
-    'Road Repair Unit 1',
-    'Road Repair Unit 2',
-    'Drainage Team',
-    'Emergency Response',
-  ];
-
+  String _userRole = 'citizen';
   String _assignedTeam = 'Unassigned';
-  String? _selectedTeam;
+  String? _assignedTeamId;
+  String? _selectedTeamId;
   bool _isAssigning = false;
 
   @override
   void initState() {
     super.initState();
     _complaint = widget.complaint;
+    _assignedTeam = _complaint.assignedTeamName ??
+        (_complaint.assignedTeamId != null ? _complaint.assignedTeamId! : 'Unassigned');
+    _assignedTeamId = _complaint.assignedTeamId;
+    _selectedTeamId = _assignedTeamId;
+    _loadUserRole();
+    _loadTeamUsers();
+  }
+
+  Future<void> _loadUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userRole = prefs.getString('user_role')?.toLowerCase() ?? 'citizen';
+    });
+  }
+
+  Future<void> _loadTeamUsers() async {
+    try {
+      final users = await _repository.getUsers();
+      setState(() {
+        _teamUsers = users.where((u) => u.role == 'team_member' || u.role == 'department_head').toList();
+      });
+    } catch (_) {
+      setState(() {
+        _teamUsers = [];
+      });
+    }
   }
 
   void _assignTeam() async {
-    if (_selectedTeam == null || _selectedTeam == _assignedTeam) return;
+    if (_selectedTeamId == null || _selectedTeamId == _assignedTeamId) return;
     setState(() => _isAssigning = true);
-    await Future.delayed(const Duration(milliseconds: 700));
-    setState(() {
-      _assignedTeam = _selectedTeam!;
-      _isAssigning = false;
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white),
-              const SizedBox(width: 8),
-              Text('$_assignedTeam assigned successfully!'),
-            ],
+
+    try {
+      final updatedComplaint = await _repository.assignComplaintTeam(_complaint.id, _selectedTeamId!);
+      setState(() {
+        _complaint = updatedComplaint;
+        _assignedTeamId = updatedComplaint.assignedTeamId;
+        _assignedTeam = updatedComplaint.assignedTeamName ?? updatedComplaint.assignedTeamId ?? 'Unassigned';
+        _selectedTeamId = _assignedTeamId;
+        _isAssigning = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$_assignedTeam assigned successfully!'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF43A047),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          backgroundColor: const Color(0xFF43A047),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      setState(() => _isAssigning = false);
+      String message = 'Failed to assign task. Try again.';
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response?.data;
+        if (data is Map && data['error'] != null) {
+          message = data['error'].toString();
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Flexible(child: Text(message)),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     }
   }
 
@@ -240,11 +292,30 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
                             Icon(Icons.person_rounded, size: 16, color: Colors.grey.shade400),
                             const SizedBox(width: 8),
                             Text(
-                              'Reported by: Citizen',
+                              'Reported by: ${_complaint.citizenName ?? 'Citizen'}',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.engineering_rounded, size: 16, color: Colors.grey.shade400),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Assigned to: $_assignedTeam',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ],
@@ -274,7 +345,11 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
                     ),
                   ),
                 ),
-                // Team Assignment Section
+                const Divider(height: 1, thickness: 1, indent: 24, endIndent: 24),
+                FadeInUp(
+                  duration: const Duration(milliseconds: 450),
+                  child: _buildTimelineSection(),
+                ),
                 const Divider(height: 1, thickness: 1, indent: 24, endIndent: 24),
                 FadeInUp(
                   duration: const Duration(milliseconds: 500),
@@ -446,9 +521,114 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
     );
   }
 
+  Widget _buildTimelineSection() {
+    final status = _complaint.status.toLowerCase();
+    final createdAt = _complaint.createdAt;
+    final statusTime = _complaint.lastStatusUpdate ?? _complaint.createdAt;
+
+    final steps = [
+      _TimelineStep(
+        title: 'Submitted',
+        active: true,
+        time: createdAt != null ? DateFormat('dd MMM yyyy • hh:mm a').format(createdAt) : 'Unknown',
+      ),
+      _TimelineStep(
+        title: 'Team Assigned',
+        active: status == 'team_assigned' || status == 'repair_started' || status == 'repair_completed' || status == 'verified_closed' || status == 'resolved',
+        time: status != 'submitted' ? (statusTime != null ? DateFormat('dd MMM yyyy • hh:mm a').format(statusTime) : 'Pending') : null,
+      ),
+      _TimelineStep(
+        title: 'In Progress',
+        active: status == 'repair_started' || status == 'repair_completed' || status == 'verified_closed' || status == 'resolved',
+        time: status == 'repair_started' || status == 'repair_completed' || status == 'verified_closed' || status == 'resolved'
+            ? (statusTime != null ? DateFormat('dd MMM yyyy • hh:mm a').format(statusTime) : 'Pending')
+            : null,
+      ),
+      _TimelineStep(
+        title: 'Completed',
+        active: status == 'repair_completed' || status == 'verified_closed' || status == 'resolved',
+        time: status == 'repair_completed' || status == 'verified_closed' || status == 'resolved'
+            ? (statusTime != null ? DateFormat('dd MMM yyyy • hh:mm a').format(statusTime) : 'Pending')
+            : null,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'TIMELINE',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 16),
+          Column(
+            children: List.generate(steps.length, (index) {
+              final step = steps[index];
+              return Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        children: [
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: step.active ? const Color(0xFFF4511E) : Colors.grey.shade300,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          if (index != steps.length - 1)
+                            Container(
+                              width: 2,
+                              height: 60,
+                              margin: const EdgeInsets.symmetric(vertical: 2),
+                              color: step.active ? const Color(0xFFF4511E) : Colors.grey.shade300,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              step.title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: step.active ? const Color(0xFF263238) : Colors.grey.shade500,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              step.time ?? 'Pending',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: step.active ? Colors.grey.shade700 : Colors.grey.shade400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (index != steps.length - 1) const SizedBox(height: 12),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTeamAssignmentSection() {
     const primaryOrange = Color(0xFFF4511E);
-    final bool hasChanged = _selectedTeam != null && _selectedTeam != _assignedTeam;
+    final bool hasChanged = _selectedTeamId != null && _selectedTeamId != _assignedTeamId;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -553,22 +733,22 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Text('Select a team...', style: TextStyle(color: Colors.grey, fontSize: 14)),
                 ),
-                value: _selectedTeam,
+                value: _selectedTeamId,
                 icon: const Padding(
                   padding: EdgeInsets.only(right: 12),
                   child: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
                 ),
                 borderRadius: BorderRadius.circular(14),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                items: _teams.map((team) {
-                  final isAssigned = team == _assignedTeam;
+                items: _teamUsers.map((team) {
+                  final isAssigned = team.id == _assignedTeamId;
                   return DropdownMenuItem(
-                    value: team,
+                    value: team.id,
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            team,
+                            team.name,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: isAssigned ? FontWeight.bold : FontWeight.normal,
@@ -582,7 +762,9 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
                     ),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedTeam = val),
+                onChanged: _userRole != 'citizen'
+                    ? (val) => setState(() => _selectedTeamId = val)
+                    : null,
               ),
             ),
           ),
@@ -623,8 +805,8 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
 
   Widget _buildLocationSection() {
     final address = _complaint.location['address'] ?? 'Address details not available';
-    final lat = _complaint.location['lat'] as double? ?? 22.3039;
-    final lng = _complaint.location['lng'] as double? ?? 70.8022;
+    final lat = _complaint.latitude == 0.0 ? 22.3039 : _complaint.latitude;
+    final lng = _complaint.longitude == 0.0 ? 70.8022 : _complaint.longitude;
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -733,4 +915,16 @@ class _GovernmentComplaintDetailsScreenState extends State<GovernmentComplaintDe
       ),
     );
   }
+}
+
+class _TimelineStep {
+  final String title;
+  final bool active;
+  final String? time;
+
+  _TimelineStep({
+    required this.title,
+    required this.active,
+    this.time,
+  });
 }

@@ -73,12 +73,56 @@ router.get('/my', protect, async (req, res) => {
   try {
     const complaints = await Complaint.findAll({ 
       where: { citizenId: req.user.id },
+      include: [
+        { model: User, as: 'citizen', attributes: ['name'] },
+        { model: User, as: 'team', attributes: ['name'] }
+      ],
       order: [['createdAt', 'DESC']]
     });
     res.json(complaints);
   } catch (error) { 
     console.error('Error fetching my complaints:', error);
     res.status(500).json({ error: error.message }); 
+  }
+});
+
+router.get('/my-team', protect, async (req, res) => {
+  try {
+    const complaints = await Complaint.findAll({ 
+      where: {
+        assignedTeamId: req.user.id,
+        status: ['team_assigned', 'repair_started']
+      },
+      include: [
+        { model: User, as: 'citizen', attributes: ['name'] },
+        { model: User, as: 'team', attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(complaints);
+  } catch (error) {
+    console.error('Error fetching team complaints:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/my-team/completed', protect, async (req, res) => {
+  try {
+    const complaints = await Complaint.findAll({
+      where: {
+        assignedTeamId: req.user.id,
+        status: ['repair_completed', 'verified_closed']
+      },
+      include: [
+        { model: User, as: 'citizen', attributes: ['name'] },
+        { model: User, as: 'team', attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(complaints);
+  } catch (error) {
+    console.error('Error fetching completed team complaints:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -91,7 +135,13 @@ router.get('/my', protect, async (req, res) => {
  */
 router.get('/nearby', async (req, res) => {
   try {
-    const complaints = await Complaint.findAll({ order: [['createdAt', 'DESC']] });
+    const complaints = await Complaint.findAll({ 
+      include: [
+        { model: User, as: 'citizen', attributes: ['name'] },
+        { model: User, as: 'team', attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']] 
+    });
     res.json(complaints);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -105,7 +155,10 @@ router.get('/nearby', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const complaint = await Complaint.findByPk(req.params.id, { 
-      include: [{ model: User, as: 'citizen', attributes: ['name'] }] 
+      include: [
+        { model: User, as: 'citizen', attributes: ['name'] },
+        { model: User, as: 'team', attributes: ['name'] }
+      ] 
     });
     if (!complaint) return res.status(404).json({ error: 'Not found' });
     res.json(complaint);
@@ -156,7 +209,10 @@ router.post('/:id/reopen', protect, authorize('citizen'), async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const complaints = await Complaint.findAll({ 
-      include: [{ model: User, as: 'citizen', attributes: ['name'] }],
+      include: [
+        { model: User, as: 'citizen', attributes: ['name'] },
+        { model: User, as: 'team', attributes: ['name'] }
+      ],
       order: [['createdAt', 'DESC']]
     });
     res.json(complaints);

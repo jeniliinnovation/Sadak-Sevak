@@ -5,14 +5,14 @@ import 'package:sadak_sevak_citizen/features/government/data/government_reposito
 import 'package:sadak_sevak_citizen/features/government/domain/models/work_task_model.dart';
 import 'package:sadak_sevak_citizen/features/government/presentation/screens/government_work_details_screen.dart';
 
-class GovernmentWorkManagementScreen extends StatefulWidget {
-  const GovernmentWorkManagementScreen({super.key});
+class GovernmentTeamProgressScreen extends StatefulWidget {
+  const GovernmentTeamProgressScreen({super.key});
 
   @override
-  State<GovernmentWorkManagementScreen> createState() => _GovernmentWorkManagementScreenState();
+  State<GovernmentTeamProgressScreen> createState() => _GovernmentTeamProgressScreenState();
 }
 
-class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagementScreen> {
+class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScreen> {
   final TextEditingController _searchController = TextEditingController();
   final GovernmentRepository _repository = GovernmentRepository();
 
@@ -54,14 +54,11 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
     }
   }
 
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +83,6 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Orange Gradient Header with Search & Filters
           FadeInDown(
             duration: const Duration(milliseconds: 400),
             child: Container(
@@ -113,7 +109,6 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title Row
                   Row(
                     children: [
                       Container(
@@ -127,7 +122,7 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
                       ),
                       const SizedBox(width: 12),
                       const Text(
-                        'Work Management',
+                        'Team Progress',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -192,7 +187,6 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Search Bar
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -210,7 +204,7 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
                       onChanged: (_) => setState(() {}),
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Search work by ID or title...',
+                        hintText: 'Search work by ID, title or team...',
                         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
                         prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade400),
                         suffixIcon: _searchController.text.isNotEmpty
@@ -233,7 +227,6 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Filter Chips Row
                   Row(
                     children: [
                       Expanded(
@@ -328,11 +321,10 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
               ),
             ),
           ),
-          
           Expanded(
-            child: _isLoading 
-              ? const Center(child: CircularProgressIndicator(color: primaryOrange))
-              : _buildTeamProgressList(teamProgress),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: primaryOrange))
+                : _buildTeamProgressList(teamProgress),
           ),
         ],
       ),
@@ -351,7 +343,6 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
   }
 
   Widget _buildTeamProgressList(List<_TeamProgress> list) {
-
     if (list.isEmpty) {
       return Center(
         child: Column(

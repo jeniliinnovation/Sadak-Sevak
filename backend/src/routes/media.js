@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../middleware/upload');
+const multer = require('multer');
+const { storage, cloudinary } = require('../config/cloudinary');
 const { protect, authorize } = require('../middleware/auth');
+
+const upload = multer({ storage });
 
 /**
  * @swagger
@@ -32,69 +35,29 @@ const { protect, authorize } = require('../middleware/auth');
  *                 url: { type: string }
  *                 public_id: { type: string }
  */
-
-/**
- * @swagger
- * /api/media/repair-proof:
- *   post:
- *     summary: Upload repair proof (Team/Admin only)
- *     tags: [Media Upload]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               file:
- *                 type: string
- *                 format: binary
- *     responses:
- *       200: { description: OK }
- */
-
-/**
- * @swagger
- * /api/media/{mediaId}:
- *   delete:
- *     summary: Delete media file
- *     tags: [Media Upload]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: mediaId
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200: { description: OK }
- */
-
-
 router.post('/upload', protect, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const filePath = req.file.path.replace(/\\/g, '/');
   res.json({ 
-    url: `${baseUrl}/${filePath}`, 
+    url: req.file.path, 
     public_id: req.file.filename 
   });
 });
 
 router.post('/repair-proof', protect, authorize('team_member', 'admin'), upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const filePath = req.file.path.replace(/\\/g, '/');
   res.json({ 
-    url: `${baseUrl}/${filePath}`, 
+    url: req.file.path, 
     public_id: req.file.filename 
   });
 });
 
-router.delete('/:mediaId', protect, (req, res) => {
-  res.json({ message: 'Media deletion scheduled' });
+router.delete('/:mediaId', protect, async (req, res) => {
+  try {
+    await cloudinary.uploader.destroy(req.params.mediaId);
+    res.json({ message: 'Media deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

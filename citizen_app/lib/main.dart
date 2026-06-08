@@ -15,9 +15,12 @@ void main() {
 class SadakSevakApp extends StatelessWidget {
   const SadakSevakApp({super.key});
 
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Sadak Sevak - Citizen',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

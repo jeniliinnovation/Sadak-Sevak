@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'task_details_screen.dart';
 import '../../../complaints/domain/complaint_model.dart';
 import '../../../government/data/government_repository.dart';
@@ -12,9 +13,12 @@ class MyTasksScreen extends StatefulWidget {
 }
 
 class _MyTasksScreenState extends State<MyTasksScreen> {
+  String _selectedView = 'My Tasks';
   String _selectedFilter = 'All';
   final _repository = GovernmentRepository();
-  List<Complaint> _complaints = [];
+  List<Complaint> _allAssignedComplaints = [];
+  List<Complaint> _taskComplaintsList = [];
+  List<Complaint> _complaintItemsList = [];
   bool _isLoading = true;
 
   static const Color _blue = Color(0xFF4A80F0);
@@ -28,10 +32,13 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
 
   Future<void> _loadComplaints() async {
     try {
-      final list = await _repository.getComplaints();
+      final activeTasks = await _repository.getAssignedTasks();
+      final completedTasks = await _repository.getAssignedCompletedComplaints();
+
       if (mounted) {
         setState(() {
-          _complaints = list;
+          _taskComplaintsList = activeTasks;
+          _complaintItemsList = completedTasks;
           _isLoading = false;
         });
       }
@@ -42,25 +49,103 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     }
   }
 
+  List<Complaint> get _taskComplaints {
+    return _taskComplaintsList;
+  }
+
+  List<Complaint> get _complaintItems {
+    return _complaintItemsList;
+  }
+
   List<Complaint> get _filtered {
-    if (_selectedFilter == 'All') return _complaints;
+    final list = _selectedView == 'My Tasks' ? _taskComplaints : _complaintItems;
+    if (_selectedFilter == 'All') return list;
     if (_selectedFilter == 'Pending') {
-      return _complaints.where((c) {
+      return list.where((c) {
         final status = c.status.toLowerCase();
-        return status == 'submitted' || status == 'pending' || status == 'under_review';
+        return status == 'submitted' || status == 'pending' || status == 'under_review' || status == 'team_assigned';
       }).toList();
     }
     if (_selectedFilter == 'In Progress') {
-      return _complaints.where((c) {
+      return list.where((c) {
         final status = c.status.toLowerCase();
         return status == 'repair_started' || status == 'team_assigned';
       }).toList();
     }
     // Completed
-    return _complaints.where((c) {
+    return list.where((c) {
       final status = c.status.toLowerCase();
       return status == 'repair_completed' || status == 'verified_closed';
     }).toList();
+  }
+
+  Widget _buildViewSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(child: _viewChip('My Tasks')),
+          const SizedBox(width: 10),
+          Expanded(child: _viewChip('My Complaints')),
+        ],
+      ),
+    );
+  }
+
+  Widget _viewChip(String label) {
+    final selected = _selectedView == label;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedView = label),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? _blue : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? _blue : Colors.grey.shade200),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.grey.shade700,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: _blue));
+    }
+
+    final items = _filtered;
+    if (items.isEmpty) {
+      return Center(
+        child: Text(
+          _selectedView == 'My Tasks'
+              ? 'No tasks found for "$_selectedFilter".'
+              : 'No complaints found for "$_selectedFilter".',
+          style: TextStyle(color: Colors.grey.shade500),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final complaint = items[i];
+        return FadeInUp(
+          key: ValueKey(complaint.id),
+          delay: Duration(milliseconds: i * 60),
+          child: _taskCard(context, complaint),
+        );
+      },
+    );
   }
 
   @override
@@ -71,8 +156,8 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
-        title: const Text('My Tasks',
-            style: TextStyle(
+        title: Text(_selectedView,
+            style: const TextStyle(
                 color: _darkBlue,
                 fontWeight: FontWeight.bold,
                 fontSize: 20)),
@@ -88,6 +173,9 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
       ),
       body: Column(
         children: [
+          const SizedBox(height: 10),
+          _buildViewSelector(),
+          const SizedBox(height: 10),
           // Filter chips
           Container(
             color: Colors.white,
@@ -108,29 +196,7 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: _blue))
-                : _filtered.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No tasks found for "$_selectedFilter".',
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        itemCount: _filtered.length,
-                        itemBuilder: (context, i) {
-                          final t = _filtered[i];
-                          return FadeInUp(
-                            key: ValueKey(t.id),
-                            delay: Duration(milliseconds: i * 60),
-                            child: _taskCard(context, t),
-                          );
-                        },
-                      ),
-          ),
+          Expanded(child: _buildCurrentContent()),
         ],
       ),
     );
@@ -216,6 +282,14 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     }
 
     final address = complaint.location['address'] ?? 'Unknown Location';
+    final teamName = complaint.assignedTeamName?.isNotEmpty == true
+        ? complaint.assignedTeamName!
+        : (complaint.assignedTeamId ?? 'Unassigned');
+    final statusLabel = complaint.status == 'repair_started'
+        ? 'In Progress'
+        : complaint.status == 'repair_completed' || complaint.status == 'verified_closed'
+            ? 'Completed'
+            : 'Pending';
 
     return GestureDetector(
       onTap: () => Navigator.push(context,
@@ -265,6 +339,37 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                           color: priorityColor,
                           fontSize: 11,
                           fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text('Team: $teamName',
+                      style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text('Status: $statusLabel',
+                      style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500)),
+                  if (complaint.status == 'repair_completed' || complaint.status == 'verified_closed')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Completed by your team',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

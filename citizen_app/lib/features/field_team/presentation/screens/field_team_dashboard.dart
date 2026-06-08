@@ -83,44 +83,54 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ─── Header ───────────────────────────────────────────
+                // ─── Header (Citizen-style Premium Design in Blue) ───────────
                 FadeInDown(
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                    color: Colors.white,
+                    padding: const EdgeInsets.only(top: 40, left: 20, right: 20, bottom: 30),
+                    decoration: const BoxDecoration(
+                      color: _blue,
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Hello, $_userName',
-                                style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade800)),
-                            Text(_userRole,
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey.shade500)),
-                          ],
-                        ),
                         Row(
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.notifications_outlined,
-                                  color: Colors.grey),
-                              onPressed: () {},
-                            ),
                             const CircleAvatar(
-                              radius: 21,
-                              backgroundColor: _blue,
-                              child: Text('PM',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13)),
+                              radius: 25,
+                              backgroundColor: Colors.white24,
+                              child: Icon(Icons.engineering_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(width: 15),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hello, $_userName 👋',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  _userRole,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                ),
+                              ],
                             ),
                           ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
                         ),
                       ],
                     ),
@@ -137,7 +147,9 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                         delay: const Duration(milliseconds: 80),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -146,15 +158,22 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text("Today's Tasks Summary",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: _darkBlue)),
+                              const Text(
+                                "Today's Tasks Summary",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: _darkBlue,
+                                ),
+                              ),
                               IconButton(
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.refresh, color: _blue, size: 18),
+                                icon: const Icon(
+                                  Icons.refresh,
+                                  color: _blue,
+                                  size: 18,
+                                ),
                                 onPressed: () {
                                   setState(() => _isLoading = true);
                                   _loadDashboardData();
@@ -173,41 +192,59 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 16),
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4))
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
                             ],
                           ),
                           child: _isLoading
                               ? const SizedBox(
                                   height: 80,
                                   child: Center(
-                                    child: CircularProgressIndicator(color: _blue),
+                                    child: CircularProgressIndicator(
+                                      color: _blue,
+                                    ),
                                   ),
                                 )
                               : Column(
                                   children: [
-                                    Text('$total',
-                                        style: const TextStyle(
-                                            fontSize: 40,
-                                            fontWeight: FontWeight.bold,
-                                            color: _darkBlue)),
+                                    Text(
+                                      '$total',
+                                      style: const TextStyle(
+                                        fontSize: 40,
+                                        fontWeight: FontWeight.bold,
+                                        color: _darkBlue,
+                                      ),
+                                    ),
                                     Divider(
-                                        color: Colors.grey.shade100, height: 20),
+                                      color: Colors.grey.shade100,
+                                      height: 20,
+                                    ),
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceAround,
                                       children: [
                                         _miniStat('$pending', 'Pending'),
-                                        Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                        Container(
+                                          width: 1,
+                                          height: 28,
+                                          color: Colors.grey.shade200,
+                                        ),
                                         _miniStat('$inProgress', 'In Progress'),
-                                        Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                        Container(
+                                          width: 1,
+                                          height: 28,
+                                          color: Colors.grey.shade200,
+                                        ),
                                         _miniStat('$completed', 'Completed'),
                                       ],
                                     ),
@@ -217,27 +254,6 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                       ),
 
                       const SizedBox(height: 18),
-
-                      // ─── My Statistics ──────────────────────────────
-                      FadeInUp(
-                        delay: const Duration(milliseconds: 170),
-                        child: _card(
-                          title: 'My Statistics',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _statBlock('$completed', 'Total\nCompleted'),
-                              Container(width: 1, height: 36, color: Colors.grey.shade200),
-                              _statBlock('$inProgress', 'Active\nTasks'),
-                              Container(width: 1, height: 36, color: Colors.grey.shade200),
-                              _statBlock('1.8 hrs', 'Avg Response'),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
                       // ─── Quick Actions ──────────────────────────────
                       FadeInUp(
                         delay: const Duration(milliseconds: 210),
@@ -250,10 +266,12 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                                 Icons.add_circle_outline,
                                 'Report',
                                 () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const ReportNewIssueScreen())),
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ReportNewIssueScreen(),
+                                  ),
+                                ),
                               ),
                               _quickAction(
                                 Icons.assignment_outlined,
@@ -261,9 +279,11 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                                 () {
                                   // Navigate to Tasks tab (index 2 in main layout) or page
                                   Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => const MyTasksScreen()));
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const MyTasksScreen(),
+                                    ),
+                                  );
                                 },
                               ),
                               _quickAction(
@@ -275,9 +295,11 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                                 Icons.sync_rounded,
                                 'Sync Data',
                                 () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const SyncDataScreen())),
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SyncDataScreen(),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -290,20 +312,27 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('My Assignments',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                  color: _darkBlue)),
+                          const Text(
+                            'My Assignments',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: _darkBlue,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const MyTasksScreen()));
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const MyTasksScreen(),
+                                ),
+                              );
                             },
-                            child: const Text('View All',
-                                style: TextStyle(color: _blue)),
+                            child: const Text(
+                              'View All',
+                              style: TextStyle(color: _blue),
+                            ),
                           ),
                         ],
                       ),
@@ -318,28 +347,30 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
                               ),
                             )
                           : _complaints.isEmpty
-                              ? Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 20),
-                                    child: Text(
-                                      'No assignments found.',
-                                      style: TextStyle(color: Colors.grey.shade500),
-                                    ),
-                                  ),
-                                )
-                              : Column(
-                                  children: List.generate(
-                                    _complaints.length > 5 ? 5 : _complaints.length,
-                                    (i) {
-                                      final t = _complaints[i];
-                                      return FadeInUp(
-                                        key: ValueKey(t.id),
-                                        delay: Duration(milliseconds: 250 + i * 60),
-                                        child: _taskCard(context, t),
-                                      );
-                                    },
-                                  ),
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
                                 ),
+                                child: Text(
+                                  'No assignments found.',
+                                  style: TextStyle(color: Colors.grey.shade500),
+                                ),
+                              ),
+                            )
+                          : Column(
+                              children: List.generate(
+                                _complaints.length > 5 ? 5 : _complaints.length,
+                                (i) {
+                                  final t = _complaints[i];
+                                  return FadeInUp(
+                                    key: ValueKey(t.id),
+                                    delay: Duration(milliseconds: 250 + i * 60),
+                                    child: _taskCard(context, t),
+                                  );
+                                },
+                              ),
+                            ),
 
                       const SizedBox(height: 20),
                     ],
@@ -353,53 +384,68 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
     );
   }
 
-  Widget _miniStat(String v, String label) => Column(children: [
-        Text(v,
-            style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: _darkBlue)),
-        Text(label,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-      ]);
+  Widget _miniStat(String v, String label) => Column(
+    children: [
+      Text(
+        v,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: _darkBlue,
+        ),
+      ),
+      Text(label, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+    ],
+  );
 
-  Widget _statBlock(String v, String label) => Column(children: [
-        Text(v,
-            style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: _darkBlue)),
-        const SizedBox(height: 2),
-        Text(label,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 10)),
-      ]);
+  Widget _statBlock(String v, String label) => Column(
+    children: [
+      Text(
+        v,
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: _darkBlue,
+        ),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
+      ),
+    ],
+  );
 
   Widget _card({required String title, required Widget child}) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
-          ],
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: _darkBlue)),
-            const SizedBox(height: 14),
-            child,
-          ],
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: _darkBlue,
+          ),
         ),
-      );
+        const SizedBox(height: 14),
+        child,
+      ],
+    ),
+  );
 
   Widget _quickAction(IconData icon, String label, VoidCallback onTap) =>
       GestureDetector(
@@ -415,11 +461,14 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
               child: Icon(icon, color: _blue, size: 22),
             ),
             const SizedBox(height: 5),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       );
@@ -464,17 +513,32 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
       status = 'In Progress';
       statusColor = _blue;
       statusBg = const Color(0xFFEEF3FF);
-    } else if (complaint.status == 'repair_completed' || complaint.status == 'verified_closed') {
+    } else if (complaint.status == 'repair_completed' ||
+        complaint.status == 'verified_closed') {
       status = 'Completed';
       statusColor = Colors.green;
       statusBg = Colors.green.shade50;
     }
 
     final address = complaint.location['address'] ?? 'Unknown Location';
+    final teamName = complaint.assignedTeamName?.isNotEmpty == true
+        ? complaint.assignedTeamName!
+        : (complaint.assignedTeamId ?? 'Unassigned');
+    final statusLabel = complaint.status == 'repair_started'
+        ? 'In Progress'
+        : complaint.status == 'repair_completed' || complaint.status == 'verified_closed'
+            ? 'Completed'
+            : complaint.status == 'team_assigned'
+                ? 'Team Assigned'
+                : 'Pending';
 
     return GestureDetector(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => TaskDetailsScreen(complaint: complaint))),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TaskDetailsScreen(complaint: complaint),
+        ),
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
@@ -483,58 +547,89 @@ class _FieldTeamDashboardState extends State<FieldTeamDashboard> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
+        child: SizedBox(
+          height: 120,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
                   color: const Color(0xFFEEF3FF),
-                  borderRadius: BorderRadius.circular(12)),
-              child:
-                  Icon(icon, color: _blue, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(complaint.title,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: _blue, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      complaint.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Color(0xFF1A1A2E))),
-                  Text(address,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      address,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${complaint.priority} Priority',
                       style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 11)),
-                  const SizedBox(height: 3),
-                  Text('${complaint.priority} Priority',
-                      style: TextStyle(
-                          color: priorityColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold)),
-                ],
+                        color: priorityColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Team: $teamName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Status: $statusLabel',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 11, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
                   color: statusBg,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Text(status,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status,
                   style: TextStyle(
-                      color: statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ],
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

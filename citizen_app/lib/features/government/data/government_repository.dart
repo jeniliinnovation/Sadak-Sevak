@@ -27,6 +27,28 @@ class GovernmentRepository {
     }
   }
 
+  Future<List<Complaint>> getAssignedTasks() async {
+    try {
+      final response = await _dio.get('complaints/my-team');
+      return (response.data as List)
+          .map((json) => Complaint.fromJson(json))
+          .toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<Complaint>> getAssignedCompletedComplaints() async {
+    try {
+      final response = await _dio.get('complaints/my-team/completed');
+      return (response.data as List)
+          .map((json) => Complaint.fromJson(json))
+          .toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<List<Contractor>> getContractors() async {
     try {
       final response = await _dio.get('admin/contractors');
@@ -107,12 +129,13 @@ class GovernmentRepository {
     }
   }
 
-  Future<void> assignComplaintTeam(String complaintId, String teamId) async {
+  Future<Complaint> assignComplaintTeam(String complaintId, String teamId) async {
     try {
-      await _dio.put(
+      final response = await _dio.put(
         'admin/complaints/$complaintId/assign',
         data: {'teamId': teamId},
       );
+      return Complaint.fromJson(response.data);
     } catch (e) {
       rethrow;
     }

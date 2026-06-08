@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sadak_sevak_citizen/core/theme/app_theme.dart';
 import 'package:sadak_sevak_citizen/features/home/presentation/screens/home_screen.dart';
 import 'package:sadak_sevak_citizen/features/map/presentation/screens/map_screen.dart';
-import 'package:sadak_sevak_citizen/features/complaints/presentation/screens/complaints_list_screen.dart';
 import 'package:sadak_sevak_citizen/features/profile/presentation/screens/profile_screen.dart';
+import 'package:sadak_sevak_citizen/features/complaints/presentation/screens/complaints_list_screen.dart';
 import 'package:sadak_sevak_citizen/features/report/presentation/screens/report_issue_screen.dart';
 import 'package:sadak_sevak_citizen/features/field_team/presentation/screens/field_team_dashboard.dart';
 import 'package:sadak_sevak_citizen/features/field_team/presentation/screens/my_tasks_screen.dart';
@@ -31,7 +31,8 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   List<Widget> get _screens {
-    if (widget.role == 'team_member') {
+    final role = widget.role.toLowerCase();
+    if (role == 'team_member') {
       return [
         const FieldTeamDashboard(),
         const MapScreen(),
@@ -40,7 +41,7 @@ class _MainLayoutState extends State<MainLayout> {
         const FieldTeamProfileScreen(),
       ];
     }
-    if (widget.role == 'government') {
+    if (role == 'government' || role == 'admin' || role == 'department_head') {
       return [
         const GovernmentDashboardScreen(),
         const GovernmentComplaintsScreen(),
@@ -59,12 +60,14 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final role = widget.role.toLowerCase();
+    debugPrint('MainLayout: Building for role: $role');
     const teamBlue = Color(0xFF4A80F0);
     const primaryOrange = Color(0xFFF4511E);
 
     return Scaffold(
       extendBody: true,
-      body: _screens[_selectedIndex],
+      body: _screens[_selectedIndex.clamp(0, _screens.length - 1)],
       floatingActionButton: widget.role == 'citizen'
           ? SizedBox(
               height: 65,
@@ -74,15 +77,19 @@ class _MainLayoutState extends State<MainLayout> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const ReportIssueScreen()),
+                      builder: (context) => const ReportIssueScreen(),
+                    ),
                   );
                 },
                 backgroundColor: AppTheme.primaryColor,
                 elevation: 8,
                 heroTag: 'main_fab',
                 shape: const CircleBorder(),
-                child:
-                    const Icon(Icons.add_rounded, color: Colors.white, size: 35),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 35,
+                ),
               ),
             )
           : null,
@@ -99,62 +106,127 @@ class _MainLayoutState extends State<MainLayout> {
         clipBehavior: Clip.antiAlias,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: widget.role == 'team_member'
+          children: role == 'team_member'
               ? [
-                  _navItem(0, Icons.home_outlined, Icons.home_rounded, 'Home',
-                      teamBlue),
-                  _navItem(1, Icons.map_outlined, Icons.map_rounded, 'Map',
-                      teamBlue),
-                  _navItem(2, Icons.assignment_outlined,
-                      Icons.assignment_rounded, 'Tasks', teamBlue),
                   _navItem(
-                      3,
-                      Icons.notifications_outlined,
-                      Icons.notifications_rounded,
-                      'Alerts',
-                      teamBlue),
-                  _navItem(4, Icons.person_outline_rounded,
-                      Icons.person_rounded, 'Profile', teamBlue),
+                    0,
+                    Icons.home_outlined,
+                    Icons.home_rounded,
+                    'Home',
+                    teamBlue,
+                  ),
+                  _navItem(
+                    1,
+                    Icons.map_outlined,
+                    Icons.map_rounded,
+                    'Map',
+                    teamBlue,
+                  ),
+                  _navItem(
+                    2,
+                    Icons.assignment_outlined,
+                    Icons.assignment_rounded,
+                    'Tasks',
+                    teamBlue,
+                  ),
+                  _navItem(
+                    3,
+                    Icons.notifications_outlined,
+                    Icons.notifications_rounded,
+                    'Alerts',
+                    teamBlue,
+                  ),
+                  _navItem(
+                    4,
+                    Icons.person_outline_rounded,
+                    Icons.person_rounded,
+                    'Profile',
+                    teamBlue,
+                  ),
                 ]
-              : widget.role == 'government'
-                  ? [
-                      _navItem(0, Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard',
-                          primaryOrange),
-                      _navItem(1, Icons.campaign_outlined, Icons.campaign_rounded, 'Complaints',
-                          primaryOrange),
-                      _navItem(2, Icons.fact_check_outlined, Icons.fact_check_rounded, 'Approvals',
-                          primaryOrange),
-                      _navItem(3, Icons.construction_outlined, Icons.construction_rounded, 'Work',
-                          primaryOrange),
-                      _navItem(4, Icons.more_horiz_outlined, Icons.more_horiz_rounded, 'More',
-                          primaryOrange),
-                    ]
-                  : [
-                      _navItem(0, Icons.home_outlined, Icons.home_rounded, 'Home',
-                          AppTheme.primaryColor),
-                      _navItem(1, Icons.map_outlined, Icons.map_rounded, 'Map',
-                          AppTheme.primaryColor),
-                      const SizedBox(width: 40), // Space for FAB
-                      _navItem(
-                          2,
-                          Icons.notifications_outlined,
-                          Icons.notifications_rounded,
-                          'Updates',
-                          AppTheme.primaryColor),
-                      _navItem(
-                          3,
-                          Icons.person_outline_rounded,
-                          Icons.person_rounded,
-                          'Profile',
-                          AppTheme.primaryColor),
-                    ],
+              : (role == 'government' ||
+                    role == 'admin' ||
+                    role == 'department_head')
+              ? [
+                  _navItem(
+                    0,
+                    Icons.dashboard_outlined,
+                    Icons.dashboard_rounded,
+                    'Dashboard',
+                    primaryOrange,
+                  ),
+                  _navItem(
+                    1,
+                    Icons.campaign_outlined,
+                    Icons.campaign_rounded,
+                    'Complaints',
+                    primaryOrange,
+                  ),
+                  _navItem(
+                    2,
+                    Icons.fact_check_outlined,
+                    Icons.fact_check_rounded,
+                    'Approvals',
+                    primaryOrange,
+                  ),
+                  _navItem(
+                    3,
+                    Icons.construction_outlined,
+                    Icons.construction_rounded,
+                    'Work',
+                    primaryOrange,
+                  ),
+                  _navItem(
+                    4,
+                    Icons.more_horiz_outlined,
+                    Icons.more_horiz_rounded,
+                    'More',
+                    primaryOrange,
+                  ),
+                ]
+              : [
+                  _navItem(
+                    0,
+                    Icons.home_outlined,
+                    Icons.home_rounded,
+                    'Home',
+                    AppTheme.primaryColor,
+                  ),
+                  _navItem(
+                    1,
+                    Icons.map_outlined,
+                    Icons.map_rounded,
+                    'Map',
+                    AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 40), // Space for FAB
+                  _navItem(
+                    2,
+                    Icons.list_alt_outlined,
+                    Icons.list_alt_rounded,
+                    'My Complaints',
+                    AppTheme.primaryColor,
+                  ),
+                  _navItem(
+                    3,
+                    Icons.person_outline_rounded,
+                    Icons.person_rounded,
+                    'Profile',
+                    AppTheme.primaryColor,
+                  ),
+                ],
         ),
       ),
     );
   }
 
-  Widget _navItem(int index, IconData outlineIcon, IconData filledIcon,
-      String label, Color activeColor) {
+  Widget _navItem(
+    int index,
+    IconData outlineIcon,
+    IconData filledIcon,
+    String label,
+    Color activeColor,
+  ) {
     final selected = _selectedIndex == index;
     return InkWell(
       onTap: () => setState(() => _selectedIndex = index),
@@ -184,8 +256,7 @@ class _MainLayoutState extends State<MainLayout> {
             label,
             style: TextStyle(
               fontSize: 10,
-              fontWeight:
-                  selected ? FontWeight.bold : FontWeight.w500,
+              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
               color: selected ? activeColor : Colors.grey.shade500,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:sadak_sevak_citizen/core/theme/app_theme.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:sadak_sevak_citizen/features/complaints/data/complaint_repository.dart';
@@ -32,6 +33,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   String _selectedPriority = 'Medium';
   bool _isSubmitting = false;
   bool _isFetchingLocation = false;
+  String _currentAddress = 'Fetching...';
+  bool _isFetchingAddress = false;
   
   String? _selectedVideo;
 
@@ -57,11 +60,34 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       );
       final loc = LatLng(pos.latitude, pos.longitude);
       setState(() => _selectedLocation = loc);
-      _mapController.move(loc, 16);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _mapController.move(loc, 16);
+      });
     } catch (e) {
       // Fallback: keep default Mumbai coords
     } finally {
       if (mounted) setState(() => _isFetchingLocation = false);
+    }
+  }
+
+  Future<void> _fetchAddress(LatLng loc) async {
+    setState(() => _isFetchingAddress = true);
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(loc.latitude, loc.longitude);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        setState(() {
+          _currentAddress = '${p.street}, ${p.subLocality}, ${p.locality}';
+          _isFetchingAddress = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Coordinates: ${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}';
+          _isFetchingAddress = false;
+        });
+      }
     }
   }
 
@@ -272,6 +298,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                     if (hasGesture) {
                       setState(() {
                         _selectedLocation = position.center;
+                        _fetchAddress(position.center);
                       });
                     }
                   },
@@ -283,27 +310,59 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                   ),
                 ],
               ),
-              // Fixed Marker in Center
+              // Fixed Marker in Center (Pulsing Blue Dot)
               IgnorePointer(
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_on, size: 48, color: AppTheme.primaryColor),
-                      Container(
-                        height: 10,
-                        width: 10,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.2),
-                          shape: BoxShape.circle,
+                      FadeIn(
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2196F3).withOpacity(0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: const Color(0xFF2196F3).withOpacity(0.1),
+                                width: 1),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    spreadRadius: 0,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ],
+                              ),
+                              child: Center(
+                                child: Container(
+                                  width: 18,
+                                  height: 18,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF2196F3),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 48), // Adjust for icon height
+                      const SizedBox(height: 0), // No offset needed for circular dot
                     ],
                   ),
                 ),
               ),
-              PositionImage(
+              Positioned(
                 top: 20,
                 right: 20,
                 child: GestureDetector(
@@ -313,7 +372,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                   ),
                 ),
               ),
-              PositionImage(bottom: 20, right: 20, child: _buildMapAction(Icons.layers_outlined)),
+              Positioned(bottom: 20, right: 20, child: _buildMapAction(Icons.layers_outlined)),
             ],
           ),
         ),
@@ -367,10 +426,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: const Color(0xFF2196F3).withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.location_on_rounded, color: AppTheme.primaryColor, size: 20),
+                      child: const Icon(Icons.location_on_rounded, color: Color(0xFF2196F3), size: 20),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -378,13 +437,15 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Pointer Location',
+                            _isFetchingAddress ? 'Updating address...' : 'Pointer Location',
                             style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}',
+                            _isFetchingAddress ? '...' : _currentAddress,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

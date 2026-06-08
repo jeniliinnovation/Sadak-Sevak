@@ -33,8 +33,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadData() async {
-    await _determinePosition();
+    // Centering is already handled by initialCenter in MapOptions
     await _fetchComplaints();
+    await _determinePosition(); // This will move to user location IF permission is granted
   }
 
   Future<void> _determinePosition() async {
@@ -46,9 +47,12 @@ class _MapScreenState extends State<MapScreen> {
       if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
         final pos = await Geolocator.getCurrentPosition();
         if (mounted) {
+          final userLoc = LatLng(pos.latitude, pos.longitude);
           setState(() {
-            _userLocation = LatLng(pos.latitude, pos.longitude);
-            _mapController.move(_userLocation!, 15);
+            _userLocation = userLoc;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _mapController.move(userLoc, 15);
           });
         }
       }
@@ -60,6 +64,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _fetchComplaints() async {
     try {
       final complaints = await _complaintRepo.getAllComplaints();
+      debugPrint('Map loaded ${complaints.length} complaints');
       if (mounted) {
         setState(() {
           _allComplaints = complaints;
@@ -67,31 +72,40 @@ class _MapScreenState extends State<MapScreen> {
         });
       }
     } catch (e) {
+      debugPrint('Map fetch error: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   List<Complaint> get _filteredComplaints {
-    if (_selectedCategory == 'All') return _allComplaints;
-    
+    List<Complaint> filtered = _allComplaints;
     if (_selectedCategory == 'Nearby') {
-      if (_userLocation == null) return _allComplaints;
-      return _allComplaints.where((c) {
-        final dist = Geolocator.distanceBetween(
-          _userLocation!.latitude,
-          _userLocation!.longitude,
-          c.location['lat'] as double? ?? 0.0,
-          c.location['lng'] as double? ?? 0.0,
-        );
-        return dist <= 5000; // 5km radius
-      }).toList();
+      if (_userLocation != null) {
+        filtered = _allComplaints.where((c) {
+          final lat = c.latitude;
+          final lng = c.longitude;
+          final dist = Geolocator.distanceBetween(
+            _userLocation!.latitude,
+            _userLocation!.longitude,
+            lat,
+            lng,
+          );
+          return dist <= 5000;
+        }).toList();
+      }
+    } else if (_selectedCategory != 'All') {
+      String catVal = _selectedCategory.toLowerCase();
+      if (catVal == 'potholes') filtered = _allComplaints.where((c) => c.category.toLowerCase().contains('pothole')).toList();
+      else if (catVal == 'lights') filtered = _allComplaints.where((c) => c.category.toLowerCase().contains('light')).toList();
+      else if (catVal == 'cleanup') filtered = _allComplaints.where((c) => c.category.toLowerCase().contains('trash') || c.category.toLowerCase().contains('clean')).toList();
     }
 
-    String catVal = _selectedCategory.toLowerCase();
-    if (catVal == 'potholes') return _allComplaints.where((c) => c.category.toLowerCase().contains('pothole')).toList();
-    if (catVal == 'lights') return _allComplaints.where((c) => c.category.toLowerCase().contains('light')).toList();
-    if (catVal == 'cleanup') return _allComplaints.where((c) => c.category.toLowerCase().contains('trash') || c.category.toLowerCase().contains('clean')).toList();
-    return _allComplaints;
+    // Filter out items with 0,0 location
+    return filtered.where((c) {
+      final lat = (c.location['lat'] as num?)?.toDouble() ?? 0.0;
+      final lng = (c.location['lng'] as num?)?.toDouble() ?? 0.0;
+      return lat != 0.0 && lng != 0.0;
+    }).toList();
   }
 
   @override
@@ -99,6 +113,7 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
+          _buildDebugOverlay(),
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -129,25 +144,32 @@ class _MapScreenState extends State<MapScreen> {
                   ..._filteredComplaints.map((issue) {
                     bool isSelected = _selectedIssue?.id == issue.id;
                     Color markerColor = _getMarkerColor(issue.status);
-                    final lat = issue.location['lat'] as double? ?? 0.0;
-                    final lng = issue.location['lng'] as double? ?? 0.0;
+                    final lat = issue.latitude;
+                    final lng = issue.longitude;
                     
                     return Marker(
                       point: LatLng(lat, lng),
-                      width: 60,
-                      height: 60,
+                      width: 50,
+                      height: 50,
                       child: GestureDetector(
                         onTap: () => setState(() => _selectedIssue = isSelected ? null : issue),
-                        child: Pulse(
-                          infinite: !isSelected,
-                          child: Container(
-                            padding: EdgeInsets.all(isSelected ? 6 : 4),
-                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)]),
-                            child: Icon(
-                              isSelected ? Icons.location_history_rounded : Icons.location_on_rounded,
-                              color: markerColor,
-                              size: isSelected ? 30 : 25,
-                            ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? markerColor.withOpacity(0.2) : Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: markerColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: markerColor.withOpacity(0.3),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              )
+                            ],
+                          ),
+                          child: Icon(
+                            isSelected ? Icons.location_history_rounded : Icons.location_on_rounded,
+                            color: markerColor,
+                            size: 28,
                           ),
                         ),
                       ),
@@ -166,6 +188,9 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
           ),
+
+          if (!_isLoading && _filteredComplaints.isEmpty)
+            Positioned.fill(child: _buildEmptyLocationFallback()),
 
           if (_selectedIssue != null)
             Positioned(
@@ -295,6 +320,64 @@ class _MapScreenState extends State<MapScreen> {
       onPressed: onTap,
       backgroundColor: isPrimary ? AppTheme.primaryColor : Colors.white,
       child: Icon(icon, color: isPrimary ? Colors.white : Colors.grey),
+    );
+  }
+
+  Widget _buildEmptyLocationFallback() {
+    String message;
+    if (_allComplaints.isEmpty) {
+      message = 'No complaints available to show on the map.';
+    } else if (_selectedCategory == 'Nearby' && _userLocation == null) {
+      message = 'Grant location permission to show nearby complaints.';
+    } else {
+      message = 'No complaints with valid location data are available.';
+    }
+
+    return Container(
+      color: Colors.white.withOpacity(0.85),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.location_off_outlined, size: 48, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          if (_selectedCategory == 'Nearby' && _userLocation == null)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text(
+                'Please enable location services and refresh the screen.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebugOverlay() {
+    return Positioned(
+      top: 100,
+      left: 20,
+      right: 20,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+          child: Text(
+            'Debug: ${_allComplaints.length} loaded, ${_filteredComplaints.length} visible. Cat: $_selectedCategory',
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }

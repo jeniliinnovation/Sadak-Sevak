@@ -65,48 +65,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
     setState(() => isLoading = true);
 
-    // --- DEMO BYPASS FOR TESTING ---
-    if (isLogin) {
-      if (email == 'fieldteam@sadaksevak.com' && password == 'team123') {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainLayout(role: 'team_member')),
-          );
-        }
-        return;
-      } else if (email == 'admin@sadaksevak.com' && password == 'admin123') {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainLayout(role: 'admin')),
-          );
-        }
-        return;
-      } else if (email == 'government@sadaksevak.com' && password == 'govt123') {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainLayout(role: 'government')),
-          );
-        }
-        return;
-      } else if (email == 'john@gmail.com' && password == 'user123') {
-         await Future.delayed(const Duration(milliseconds: 800));
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainLayout(role: 'citizen')),
-          );
-        }
-        return;
-      }
-    }
-    // --------------------------------
-
     try {
       final user = isLogin 
         ? await _authRepo.login(email, password)
@@ -116,12 +74,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             password,
           );
           
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MainLayout(role: user.role)),
-        );
-      }
+        debugPrint('Auth Success: ${user.email} logged in with role: ${user.role}');
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MainLayout(role: user.role)),
+          );
+        }
     } on DioException catch (e) {
       debugPrint('Auth Error: ${e.message}');
       debugPrint('Auth Data: ${e.response?.data}');
@@ -397,9 +356,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           const SizedBox(height: 4),
                           _credRow('Admin', 'admin@sadaksevak.com', 'admin123'),
                           const SizedBox(height: 4),
-                          _credRow('Team', 'fieldteam@sadaksevak.com', 'team123'),
+                          _credRow('Team', 'priya.mehta@gov.in', 'gov123'),
                           const SizedBox(height: 4),
-                          _credRow('Govt', 'government@sadaksevak.com', 'govt123'),
+                          _credRow('Govt', 'ravi.kumar@gov.in', 'gov123'),
                         ],
                       ),
                     ),

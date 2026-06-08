@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sadak_sevak_citizen/core/theme/app_theme.dart';
 import 'package:sadak_sevak_citizen/features/complaints/presentation/screens/complaint_details_screen.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/complaint_repository.dart';
 import '../../domain/complaint_model.dart';
 
@@ -12,24 +13,42 @@ class ComplaintsListScreen extends StatefulWidget {
   State<ComplaintsListScreen> createState() => _ComplaintsListScreenState();
 }
 
-class _ComplaintsListScreenState extends State<ComplaintsListScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
   final _complaintRepo = ComplaintRepository();
+  final TextEditingController _userSearchController = TextEditingController();
   List<Complaint> _complaints = [];
   bool _isLoading = true;
+  String _userRole = 'citizen';
+  String _selectedListType = 'my';
+  String _selectedStatus = 'pending';
+  String _userSearchTerm = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _fetchComplaints();
+    _loadUserRoleAndComplaints();
+  }
+
+  Future<void> _loadUserRoleAndComplaints() async {
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('user_role')?.toLowerCase() ?? 'citizen';
+    setState(() => _userRole = role);
+    await _fetchComplaints();
+  }
+
+  @override
+  void dispose() {
+    _userSearchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchComplaints() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _complaintRepo.getAllComplaints();
-      setState(() => _complaints = data);
+      final data = _selectedListType == 'all'
+          ? await _complaintRepo.getAllComplaints()
+          : await _complaintRepo.getMyComplaints();
+      if (mounted) setState(() => _complaints = data);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -42,75 +61,153 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> with Single
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
       appBar: AppBar(
-        title: const Text('Community Updates', style: TextStyle(color: AppTheme.secondaryColor, fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(
+          _selectedListType == 'all' ? 'All Complaints' : 'My Complaints',
+          style: const TextStyle(color: AppTheme.secondaryColor, fontWeight: FontWeight.bold, fontSize: 20),
+        ),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.secondaryColor, size: 20), onPressed: () => Navigator.pop(context)),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              indicatorColor: Colors.transparent,
-              dividerColor: Colors.transparent,
-              labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-              tabs: [
-                _buildTab('All', 0),
-                _buildTab('In Progress', 1),
-                _buildTab('Resolved', 2),
-                _buildTab('Submitted', 3),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16),
+                  child: Column(
+                    children: [
+                      _buildListTypeSwitcher(),
+                      const SizedBox(height: 8),
+                      _buildStatusSwitcher(),
+                      const SizedBox(height: 8),
+                      _buildUserSearchField(),
+                    ],
+                  ),
+                ),
+                Expanded(child: _buildList()),
               ],
             ),
-          ),
-        ),
-      ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : TabBarView(
-            controller: _tabController,
-            children: [
-              _buildList(),
-              _buildList(status: 'under_review'), // Map backend to UI
-              _buildList(status: 'verified_closed'),
-              _buildList(status: 'submitted'),
-            ],
-          ),
     );
   }
 
-  Widget _buildTab(String label, int index) {
-    return AnimatedBuilder(
-      animation: _tabController,
-      builder: (context, child) {
-        bool isSelected = _tabController.index == index;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryColor : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200),
+  Widget _buildListTypeSwitcher() {
+    final items = [
+      {'value': 'my', 'label': 'My Complaints'},
+      {'value': 'all', 'label': 'All Complaints'},
+    ];
+
+    return Row(
+      children: items.map((item) {
+        final value = item['value']!;
+        final label = item['label']!;
+        final isSelected = _selectedListType == value;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () async {
+              if (_selectedListType != value) {
+                setState(() {
+                  _selectedListType = value;
+                  if (_selectedListType == 'my' && !['all', 'pending', 'in_progress', 'complete'].contains(_selectedStatus)) {
+                    _selectedStatus = 'pending';
+                  }
+                  if (_selectedListType == 'all' && !['pending', 'citizen', 'team', 'govt'].contains(_selectedStatus)) {
+                    _selectedStatus = 'pending';
+                  }
+                });
+                await _fetchComplaints();
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.primaryColor : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200),
+              ),
+              child: Center(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ),
           ),
-          child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: 13)),
         );
-      },
+      }).toList(),
     );
   }
 
-  Widget _buildList({String? status}) {
-    final filtered = status == null ? _complaints : _complaints.where((r) => r.status == status).toList();
+  Widget _buildStatusSwitcher() {
+    final items = _selectedListType == 'all'
+        ? [
+            {'value': 'pending', 'label': 'Pending'},
+            {'value': 'citizen', 'label': 'Citizen'},
+            {'value': 'team', 'label': 'Team Field'},
+            {'value': 'govt', 'label': 'Government'},
+          ]
+        : [
+            {'value': 'all', 'label': 'All'},
+            {'value': 'pending', 'label': 'Pending'},
+            {'value': 'in_progress', 'label': 'In Progress'},
+            {'value': 'complete', 'label': 'Complete'},
+          ];
+
+    return Row(
+      children: items.map((item) {
+        final value = item['value']!;
+        final label = item['label']!;
+        final isSelected = _selectedStatus == value;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedStatus = value),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.primaryColor : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200),
+              ),
+              child: Center(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildList() {
+    final statuses = _getStatusesForSection(_selectedStatus);
+    final filtered = _complaints.where((r) {
+      final statusMatch = statuses == null || statuses.contains(r.status);
+      final searchLower = _userSearchTerm.trim().toLowerCase();
+      final userMatch = searchLower.isEmpty ||
+          r.title.toLowerCase().contains(searchLower) ||
+          r.id.toLowerCase().contains(searchLower) ||
+          (r.citizenName?.toLowerCase().contains(searchLower) ?? false);
+      return statusMatch && userMatch;
+    }).toList();
 
     if (filtered.isEmpty) {
       return Center(
@@ -208,6 +305,10 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> with Single
                 ),
                 const SizedBox(height: 12),
                 Text(complaint.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                if (complaint.citizenName != null && complaint.citizenName!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text('Reported by: ${complaint.citizenName}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                ],
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -222,6 +323,47 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> with Single
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  List<String>? _getStatusesForSection(String? section) {
+    if (section == null || section == 'all') return null;
+    switch (section) {
+      case 'pending':
+        return ['pending', 'submitted'];
+      case 'citizen':
+        return ['submitted'];
+      case 'team':
+        return ['team_assigned', 'repair_started'];
+      case 'govt':
+        return ['under_review'];
+      case 'in_progress':
+        return ['repair_started'];
+      case 'complete':
+        return ['repair_completed', 'verified_closed'];
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildUserSearchField() {
+    return TextField(
+      controller: _userSearchController,
+      onChanged: (value) => setState(() => _userSearchTerm = value),
+      decoration: InputDecoration(
+        hintText: 'Search by user name, complaint title, or ID',
+        prefixIcon: const Icon(Icons.search, color: Colors.grey),
+        fillColor: Colors.white,
+        filled: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
       ),
     );

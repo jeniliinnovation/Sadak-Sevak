@@ -11,7 +11,8 @@ class GovernmentDashboardScreen extends StatefulWidget {
   const GovernmentDashboardScreen({super.key});
 
   @override
-  State<GovernmentDashboardScreen> createState() => _GovernmentDashboardScreenState();
+  State<GovernmentDashboardScreen> createState() =>
+      _GovernmentDashboardScreenState();
 }
 
 class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
@@ -66,7 +67,12 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
               duration: const Duration(milliseconds: 500),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 32),
+                padding: const EdgeInsets.only(
+                  top: 60,
+                  left: 24,
+                  right: 24,
+                  bottom: 32,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [primaryOrange, darkOrange],
@@ -82,7 +88,7 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                       color: Color(0x33F4511E),
                       blurRadius: 16,
                       offset: Offset(0, 8),
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
@@ -99,7 +105,10 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white30, width: 1.5),
+                                border: Border.all(
+                                  color: Colors.white30,
+                                  width: 1.5,
+                                ),
                               ),
                               child: const Icon(
                                 Icons.account_balance_rounded,
@@ -126,7 +135,10 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Colors.white,
+                            ),
                             onPressed: () {},
                           ),
                         ),
@@ -173,7 +185,7 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                             color: Colors.grey.shade200,
                             blurRadius: 20,
                             offset: const Offset(0, 8),
-                          )
+                          ),
                         ],
                       ),
                       child: Column(
@@ -182,21 +194,31 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                DateFormat('MMM dd, yyyy').format(DateTime.now()),
+                                DateFormat(
+                                  'MMM dd, yyyy',
+                                ).format(DateTime.now()),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                   color: Color(0xFF263238),
                                 ),
                               ),
-                              Icon(Icons.calendar_today_rounded, color: Colors.grey.shade400, size: 18),
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                color: Colors.grey.shade400,
+                                size: 18,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
                           if (_isLoading)
                             const Padding(
                               padding: EdgeInsets.all(20.0),
-                              child: Center(child: CircularProgressIndicator(color: Color(0xFFF4511E))),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFF4511E),
+                                ),
+                              ),
                             )
                           else
                             Column(
@@ -206,7 +228,8 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                                     Expanded(
                                       child: _buildStatBlock(
                                         'Total Complaints',
-                                        _summary?.totalComplaints.toString() ?? '0',
+                                        _summary?.totalComplaints.toString() ??
+                                            '0',
                                         'Current count',
                                         Colors.blue.shade600,
                                         Colors.blue.shade50,
@@ -243,7 +266,8 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                                     Expanded(
                                       child: _buildStatBlock(
                                         'Pending Action',
-                                        _summary?.pendingApprovals.toString() ?? '0',
+                                        _summary?.pendingApprovals.toString() ??
+                                            '0',
                                         'Requires attention',
                                         Colors.red.shade600,
                                         Colors.red.shade50,
@@ -275,7 +299,7 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                             color: Colors.grey.shade200,
                             blurRadius: 20,
                             offset: const Offset(0, 8),
-                          )
+                          ),
                         ],
                       ),
                       child: Column(
@@ -295,19 +319,28 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                               DropdownButton<String>(
                                 value: selectedPeriod,
                                 underline: const SizedBox(),
-                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: primaryOrange),
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: primaryOrange,
+                                ),
                                 style: const TextStyle(
                                   color: primaryOrange,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),
-                                items: <String>['This Month', 'This Year', 'All Time']
-                                    .map<DropdownMenuItem<String>>((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
+                                items:
+                                    <String>[
+                                      'This Month',
+                                      'This Year',
+                                      'All Time',
+                                    ].map<DropdownMenuItem<String>>((
+                                      String value,
+                                    ) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
                                 onChanged: (value) {
                                   setState(() => selectedPeriod = value!);
                                 },
@@ -319,17 +352,24 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                             height: 180,
                             width: double.infinity,
                             child: CustomPaint(
-                              painter: LineChartPainter(_summary?.monthlyTrend ?? [0,0,0,0,0,0]),
+                              painter: LineChartPainter(
+                                _summary?.monthlyTrend ?? [0, 0, 0, 0, 0, 0],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: List.generate(6, (index) {
-                              final date = DateTime.now().subtract(Duration(days: 30 * (5 - index)));
+                              final date = DateTime.now().subtract(
+                                Duration(days: 30 * (5 - index)),
+                              );
                               return Text(
                                 DateFormat('MMM').format(date),
-                                style: const TextStyle(color: Colors.grey, fontSize: 10)
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
                               );
                             }),
                           ),
@@ -353,7 +393,7 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                             color: Colors.grey.shade200,
                             blurRadius: 20,
                             offset: const Offset(0, 8),
-                          )
+                          ),
                         ],
                       ),
                       child: Column(
@@ -374,39 +414,51 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                                 height: 130,
                                 width: 130,
                                 child: CustomPaint(
-                                  painter: DonutChartPainter(_summary?.categoryPercentages ?? {}),
+                                  painter: DonutChartPainter(
+                                    _summary?.categoryPercentages ?? {},
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 24),
                               Expanded(
-                                child: Builder(builder: (context) {
-                                  final percents = _summary?.categoryPercentages ?? {};
-                                  final sortedKeys = percents.keys.toList()..sort((a, b) => percents[b]!.compareTo(percents[a]!));
-                                  final colors = [
-                                    const Color(0xFFF4511E),
-                                    const Color(0xFFFFB300),
-                                    const Color(0xFF1E88E5),
-                                    const Color(0xFF43A047),
-                                    Colors.grey.shade400,
-                                    Colors.purple,
-                                    Colors.teal,
-                                    Colors.pink,
-                                  ];
-                                  return Column(
-                                    children: List.generate(
-                                      min(sortedKeys.length, 5),
-                                      (index) {
-                                        final category = sortedKeys[index];
-                                        final percentValue = (percents[category]! * 100).toStringAsFixed(0);
-                                        return _buildCategoryLegend(
-                                          category,
-                                          '$percentValue%',
-                                          colors[index % colors.length],
-                                        );
-                                      },
-                                    ),
-                                  );
-                                }),
+                                child: Builder(
+                                  builder: (context) {
+                                    final percents =
+                                        _summary?.categoryPercentages ?? {};
+                                    final sortedKeys = percents.keys.toList()
+                                      ..sort(
+                                        (a, b) => percents[b]!.compareTo(
+                                          percents[a]!,
+                                        ),
+                                      );
+                                    final colors = [
+                                      const Color(0xFFF4511E),
+                                      const Color(0xFFFFB300),
+                                      const Color(0xFF1E88E5),
+                                      const Color(0xFF43A047),
+                                      Colors.grey.shade400,
+                                      Colors.purple,
+                                      Colors.teal,
+                                      Colors.pink,
+                                    ];
+                                    return Column(
+                                      children: List.generate(
+                                        min(sortedKeys.length, 5),
+                                        (index) {
+                                          final category = sortedKeys[index];
+                                          final percentValue =
+                                              (percents[category]! * 100)
+                                                  .toStringAsFixed(0);
+                                          return _buildCategoryLegend(
+                                            category,
+                                            '$percentValue%',
+                                            colors[index % colors.length],
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ),
@@ -448,14 +500,21 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
               Icon(icon, color: color, size: 20),
               if (isAlert)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'HIGH',
-                    style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
             ],
@@ -511,12 +570,20 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF546E7A)),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF546E7A),
+              ),
             ),
           ),
           Text(
             percent,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF263238)),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF263238),
+            ),
           ),
         ],
       ),
@@ -542,7 +609,10 @@ class LineChartPainter extends CustomPainter {
 
     final fillPaint = Paint()
       ..shader = LinearGradient(
-        colors: [const Color(0xFFF4511E).withOpacity(0.3), const Color(0xFFF4511E).withOpacity(0.0)],
+        colors: [
+          const Color(0xFFF4511E).withOpacity(0.3),
+          const Color(0xFFF4511E).withOpacity(0.0),
+        ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
@@ -569,22 +639,8 @@ class LineChartPainter extends CustomPainter {
         // Draw cubic bezier curve for smoother line
         final prevX = (i - 1) * xStep;
         final prevY = size.height - (dataPoints[i - 1] / maxVal * size.height);
-        path.cubicTo(
-          (prevX + x) / 2,
-          prevY,
-          (prevX + x) / 2,
-          y,
-          x,
-          y,
-        );
-        fillPath.cubicTo(
-          (prevX + x) / 2,
-          prevY,
-          (prevX + x) / 2,
-          y,
-          x,
-          y,
-        );
+        path.cubicTo((prevX + x) / 2, prevY, (prevX + x) / 2, y, x, y);
+        fillPath.cubicTo((prevX + x) / 2, prevY, (prevX + x) / 2, y, x, y);
       }
 
       if (i == dataPoints.length - 1) {
@@ -641,9 +697,15 @@ class DonutChartPainter extends CustomPainter {
 
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    final sortedKeys = categoryPercentages.keys.toList()..sort((a, b) => categoryPercentages[b]!.compareTo(categoryPercentages[a]!));
-    final percentages = sortedKeys.take(5).map((k) => categoryPercentages[k]!).toList();
-    
+    final sortedKeys = categoryPercentages.keys.toList()
+      ..sort(
+        (a, b) => categoryPercentages[b]!.compareTo(categoryPercentages[a]!),
+      );
+    final percentages = sortedKeys
+        .take(5)
+        .map((k) => categoryPercentages[k]!)
+        .toList();
+
     // Normalize to 100% just in case we took top 5
     double sum = percentages.fold(0, (prev, val) => prev + val);
     if (sum > 0 && sum < 1) {

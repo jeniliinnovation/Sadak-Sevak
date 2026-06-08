@@ -110,16 +110,27 @@ const { Op } = require('sequelize');
  *               items: { type: object }
  */
 router.get('/complaints', protect, async (req, res) => {
-  const complaints = await Complaint.findAll();
+  const complaints = await Complaint.findAll({
+    include: [
+      { model: User, as: 'citizen', attributes: ['name'] },
+      { model: User, as: 'team', attributes: ['name'] }
+    ]
+  });
   res.json(complaints);
 });
 
-router.put('/complaints/:id/assign', protect, authorize('admin', 'department_head'), async (req, res) => {
+router.put('/complaints/:id/assign', protect, authorize('admin', 'department_head', 'government', 'team_member'), async (req, res) => {
   const complaint = await Complaint.findByPk(req.params.id);
   if (!complaint) return res.status(404).json({ error: 'Not found' });
   complaint.assignedTeamId = req.body.teamId;
   complaint.status = 'team_assigned';
   await complaint.save();
+  await complaint.reload({
+    include: [
+      { model: User, as: 'citizen', attributes: ['name'] },
+      { model: User, as: 'team', attributes: ['name'] }
+    ]
+  });
   res.json(complaint);
 });
 

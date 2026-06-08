@@ -13,6 +13,9 @@ class Complaint {
   final DateTime? lastStatusUpdate;
   final Map<String, dynamic>? repairProof;
   final String? assignedTeamId;
+  final String? assignedTeamName;
+  final String? citizenId;
+  final String? citizenName;
 
   Complaint({
     required this.id,
@@ -29,6 +32,9 @@ class Complaint {
     this.lastStatusUpdate,
     this.repairProof,
     this.assignedTeamId,
+    this.assignedTeamName,
+    this.citizenId,
+    this.citizenName,
   });
 
   // Safe helper to always get media as a list
@@ -39,7 +45,25 @@ class Complaint {
     return [];
   }
 
+  double get latitude => _parseCoordinate(location['lat']);
+  double get longitude => _parseCoordinate(location['lng']);
+  bool get hasLocation => latitude != 0.0 || longitude != 0.0;
+
+  static double _parseCoordinate(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
   factory Complaint.fromJson(Map<String, dynamic> json) {
+    String? citizenName;
+    if (json['citizen'] is Map) {
+      citizenName = json['citizen']['name']?.toString();
+    } else if (json['citizenName'] != null) {
+      citizenName = json['citizenName'].toString();
+    }
+
     return Complaint(
       id: json['id'].toString(),
       title: json['title'] ?? '',
@@ -55,6 +79,11 @@ class Complaint {
       lastStatusUpdate: json['lastStatusUpdate'] != null ? DateTime.parse(json['lastStatusUpdate']) : null,
       repairProof: json['repairProof'] is Map ? json['repairProof'] : null,
       assignedTeamId: json['assignedTeamId']?.toString(),
+      assignedTeamName: json['team'] is Map
+          ? json['team']['name']?.toString()
+          : json['assignedTeamName']?.toString(),
+      citizenId: json['citizenId']?.toString() ?? json['citizen_id']?.toString(),
+      citizenName: citizenName,
     );
   }
 
@@ -71,6 +100,9 @@ class Complaint {
       'likesCount': likesCount,
       'confirmationCount': confirmationCount,
       'assignedTeamId': assignedTeamId,
+      'assignedTeamName': assignedTeamName,
+      'citizenId': citizenId,
+      'citizenName': citizenName,
     };
   }
 }
