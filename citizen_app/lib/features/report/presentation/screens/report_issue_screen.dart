@@ -9,6 +9,7 @@ import '../../../complaints/domain/complaint_model.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show File;
 
 class ReportIssueScreen extends StatefulWidget {
   const ReportIssueScreen({super.key});
@@ -30,11 +31,20 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   final _descriptionController = TextEditingController();
   final List<String> _selectedImages = [];
   String _selectedCategory = 'Pothole';
-  String _selectedPriority = 'Medium';
+  String _selectedPriority = 'Average';
   bool _isSubmitting = false;
   bool _isFetchingLocation = false;
   String _currentAddress = 'Fetching...';
   bool _isFetchingAddress = false;
+
+  // Validation error states
+  String? _locationError;
+  String? _titleError;
+  String? _descriptionError;
+  String? _mediaError;
+  String? _categoryError;
+  String? _priorityError;
+  bool _hasInteractedWithMap = false;
   
   String? _selectedVideo;
 
@@ -47,24 +57,63 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   Future<void> _fetchCurrentLocation() async {
     setState(() => _isFetchingLocation = true);
     try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location services are disabled. Please enable them.')),
+          );
+        }
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.denied) {
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permissions are permanently denied. Please enable them in settings.')),
+          );
+        }
         return;
       }
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+
+      Position pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 4),
+        );
+      } catch (_) {
+        // Fallback to lower accuracy if high accuracy fails or times out
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 4),
+        );
+      }
+
       final loc = LatLng(pos.latitude, pos.longitude);
-      setState(() => _selectedLocation = loc);
+      setState(() {
+        _selectedLocation = loc;
+        _hasInteractedWithMap = true;
+        _locationError = null;
+      });
+      _fetchAddress(loc); // Automatically fetch address for the found location
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _mapController.move(loc, 16);
       });
     } catch (e) {
-      // Fallback: keep default Mumbai coords
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not fetch location: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isFetchingLocation = false);
     }
@@ -91,7 +140,96 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     }
   }
 
+  bool _validateCurrentStep() {
+    switch (_currentStep) {
+      case 0: // Location step
+        if (!_hasInteractedWithMap && _currentAddress == 'Fetching...') {
+          setState(() => _locationError = 'Please wait for location to load or move the map to select a location');
+          return false;
+        }
+        setState(() => _locationError = null);
+        return true;
+
+      case 1: // Details step
+        bool isValid = true;
+        final title = _titleController.text.trim();
+        final desc = _descriptionController.text.trim();
+
+        // Title is optional - clear any error state
+        setState(() => _titleError = null);
+
+        if (_selectedCategory.isEmpty) {
+          setState(() => _categoryError = 'Please select a category');
+          isValid = false;
+        } else {
+          setState(() => _categoryError = null);
+        }
+
+        if (_selectedPriority.isEmpty) {
+          setState(() => _priorityError = 'Please select priority level');
+          isValid = false;
+        } else {
+          setState(() => _priorityError = null);
+        }
+
+        if (desc.isEmpty) {
+          setState(() => _descriptionError = 'Please describe the issue');
+          isValid = false;
+        } else if (desc.length < 10) {
+          setState(() => _descriptionError = 'Description must be at least 10 characters');
+          isValid = false;
+        } else {
+          setState(() => _descriptionError = null);
+        }
+
+        return isValid;
+
+      case 2: // Media step
+        if (_selectedImages.isEmpty) {
+          setState(() => _mediaError = 'Please add at least one photo as evidence');
+          return false;
+        }
+        setState(() => _mediaError = null);
+        return true;
+
+      case 3: // Review step — always valid (submit)
+        return true;
+
+      default:
+        return true;
+    }
+  }
+
   void nextStep() {
+    if (!_validateCurrentStep()) {
+      // Show a snackbar with the error
+      String errorMsg = 'Please fill in all required fields';
+      if (_currentStep == 0 && _locationError != null) errorMsg = _locationError!;
+      if (_currentStep == 1) {
+        if (_categoryError != null) errorMsg = _categoryError!;
+        else if (_priorityError != null) errorMsg = _priorityError!;
+        else if (_descriptionError != null) errorMsg = _descriptionError!;
+      }
+      if (_currentStep == 2 && _mediaError != null) errorMsg = _mediaError!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(child: Text(errorMsg)),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     if (_currentStep < 3) {
       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
       setState(() => _currentStep++);
@@ -104,6 +242,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     if (_currentStep > 0) {
       _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
       setState(() => _currentStep--);
+    }
+  }
+
+  void _goToStep(int targetStep) {
+    if (targetStep >= 0 && targetStep < 4) {
+      _pageController.jumpToPage(targetStep);
+      setState(() => _currentStep = targetStep);
     }
   }
 
@@ -138,7 +283,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         lat: _selectedLocation.latitude,
         lng: _selectedLocation.longitude,
         category: _selectedCategory,
-        priority: _selectedPriority,
+        priority: _selectedPriority == 'Minor' 
+            ? 'Low' 
+            : (_selectedPriority == 'Urgent' ? 'High' : 'Medium'),
         imageUrl: remoteImageUrl,
       );
 
@@ -298,6 +445,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                     if (hasGesture) {
                       setState(() {
                         _selectedLocation = position.center;
+                        _hasInteractedWithMap = true;
+                        _locationError = null;
                         _fetchAddress(position.center);
                       });
                     }
@@ -396,9 +545,17 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Select Location',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.secondaryColor),
+                  const Text.rich(
+                    TextSpan(
+                      text: 'Select Location',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.secondaryColor),
+                      children: [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
                   ),
                   TextButton.icon(
                     onPressed: _isFetchingLocation ? null : _fetchCurrentLocation,
@@ -413,13 +570,36 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                   ),
                 ],
               ),
+              if (_locationError != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 16, color: Colors.red.shade600),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _locationError!,
+                          style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAF9),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(color: _locationError != null ? Colors.red.shade200 : Colors.grey.shade200),
                 ),
                 child: Row(
                   children: [
@@ -450,6 +630,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                         ],
                       ),
                     ),
+                    if (_hasInteractedWithMap)
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: AppTheme.primaryColor, shape: BoxShape.circle),
+                        child: const Icon(Icons.check, color: Colors.white, size: 14),
+                      ),
                   ],
                 ),
               ),
@@ -476,25 +662,122 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         children: [
           _buildSectionHeader('Issue Title', 'Brief summary of the problem'),
           const SizedBox(height: 16),
-          _buildTextField(_titleController, 'e.g. Large pothole near the park'),
+          _buildTextField(_titleController, 'e.g. Large pothole near the park', errorText: _titleError),
           const SizedBox(height: 32),
-          _buildSectionHeader('Issue Category', 'What kind of problem is it?'),
+          Row(
+            children: [
+              const Text.rich(
+                TextSpan(
+                  text: 'Issue Category',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.secondaryColor),
+                  children: [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+              if (_categoryError != null) ...[
+                const SizedBox(width: 8),
+                Icon(Icons.error_outline_rounded, size: 18, color: Colors.red.shade600),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text('What kind of problem is it?', style: TextStyle(color: Colors.grey, fontSize: 13)),
+          if (_categoryError != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_rounded, size: 14, color: Colors.red.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _categoryError!,
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _buildCategoryGrid(),
           const SizedBox(height: 32),
-          _buildSectionHeader('Description', 'Provide additional details'),
+          _buildSectionHeader('Description', 'Provide additional details', isMandatory: true),
           const SizedBox(height: 16),
-          _buildTextArea('Describe the issue, landmarks, or how it affects the road...'),
+          _buildTextArea('Describe the issue, landmarks, or how it affects the road...', errorText: _descriptionError),
           const SizedBox(height: 32),
-          _buildSectionHeader('Priority Level', 'How urgent is this fix?'),
+          Row(
+            children: [
+              const Text.rich(
+                TextSpan(
+                  text: 'Priority Level',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.secondaryColor),
+                  children: [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+              if (_priorityError != null) ...[
+                const SizedBox(width: 8),
+                Icon(Icons.error_outline_rounded, size: 18, color: Colors.red.shade600),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text('How urgent is this fix?', style: TextStyle(color: Colors.grey, fontSize: 13)),
+          if (_priorityError != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_rounded, size: 14, color: Colors.red.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _priorityError!,
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildPriorityCard('Minor', Icons.info_outline_rounded, Colors.blue, _selectedPriority == 'Minor', () => setState(() => _selectedPriority = 'Minor')),
+              _buildPriorityCard('Minor', Icons.info_outline_rounded, Colors.blue, _selectedPriority == 'Minor', () => setState(() {
+                _selectedPriority = 'Minor';
+                _priorityError = null;
+              })),
               const SizedBox(width: 12),
-              _buildPriorityCard('Average', Icons.warning_amber_rounded, Colors.orange, _selectedPriority == 'Average', () => setState(() => _selectedPriority = 'Average')),
+              _buildPriorityCard('Average', Icons.warning_amber_rounded, Colors.orange, _selectedPriority == 'Average', () => setState(() {
+                _selectedPriority = 'Average';
+                _priorityError = null;
+              })),
               const SizedBox(width: 12),
-              _buildPriorityCard('Urgent', Icons.error_outline_rounded, Colors.red, _selectedPriority == 'Urgent', () => setState(() => _selectedPriority = 'Urgent')),
+              _buildPriorityCard('Urgent', Icons.error_outline_rounded, Colors.red, _selectedPriority == 'Urgent', () => setState(() {
+                _selectedPriority = 'Urgent';
+                _priorityError = null;
+              })),
             ],
           ),
         ],
@@ -502,11 +785,24 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
+  Widget _buildSectionHeader(String title, String subtitle, {bool isMandatory = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.secondaryColor)),
+        Text.rich(
+          TextSpan(
+            text: title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.secondaryColor),
+            children: isMandatory
+                ? [
+                    const TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ]
+                : null,
+          ),
+        ),
         const SizedBox(height: 4),
         Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
       ],
@@ -547,7 +843,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => setState(() => _selectedCategory = cat['name'] as String),
+              onTap: () => setState(() {
+                _selectedCategory = cat['name'] as String;
+                _categoryError = null;
+              }),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -607,36 +906,87 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
 
-  Widget _buildTextArea(String hint) {
-    return TextField(
-      controller: _descriptionController,
-      maxLines: 5,
-      style: const TextStyle(color: Colors.black),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black54),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.primaryColor)),
-      ),
+  Widget _buildTextArea(String hint, {String? errorText}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _descriptionController,
+          maxLines: 5,
+          style: const TextStyle(color: Colors.black),
+          onChanged: (_) {
+            if (_descriptionError != null) setState(() => _descriptionError = null);
+          },
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.black54),
+            filled: true,
+            fillColor: errorText != null ? Colors.red.shade50 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12), 
+              borderSide: BorderSide(color: errorText != null ? Colors.red.shade300 : Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12), 
+              borderSide: BorderSide(color: errorText != null ? Colors.red : AppTheme.primaryColor),
+            ),
+          ),
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 14, color: Colors.red.shade600),
+              const SizedBox(width: 4),
+              Text(errorText, style: TextStyle(color: Colors.red.shade600, fontSize: 12, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.primaryColor)),
-      ),
+  Widget _buildTextField(TextEditingController controller, String hint, {String? errorText}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          onChanged: (_) {
+            if (_titleError != null) setState(() => _titleError = null);
+          },
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal),
+            filled: true,
+            fillColor: errorText != null ? Colors.red.shade50 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12), 
+              borderSide: BorderSide(color: errorText != null ? Colors.red.shade300 : Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12), 
+              borderSide: BorderSide(color: errorText != null ? Colors.red : AppTheme.primaryColor),
+            ),
+            suffixIcon: errorText != null 
+              ? Icon(Icons.error_outline_rounded, color: Colors.red.shade400, size: 20)
+              : null,
+          ),
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 14, color: Colors.red.shade600),
+              const SizedBox(width: 4),
+              Text(errorText, style: TextStyle(color: Colors.red.shade600, fontSize: 12, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
@@ -647,7 +997,49 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Add Photos (Max 5)', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.secondaryColor)),
+          Row(
+            children: [
+              const Text.rich(
+                TextSpan(
+                  text: 'Add Photos (Max 5)',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.secondaryColor),
+                  children: [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+              if (_mediaError != null) ...[
+                const SizedBox(width: 8),
+                Icon(Icons.error_outline_rounded, size: 16, color: Colors.red.shade600),
+              ],
+            ],
+          ),
+          if (_mediaError != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.camera_alt_outlined, size: 16, color: Colors.red.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _mediaError!,
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 15),
           Wrap(
             spacing: 12,
@@ -657,8 +1049,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               if (_selectedImages.length < 5)
                 _buildAddMediaBox(
                   Icons.add_photo_alternate_outlined, 
-                  'Add More', 
-                  onTap: () => _showSourcePicker(isVideo: false)
+                  _selectedImages.isEmpty ? 'Add Photo' : 'Add More', 
+                  onTap: () {
+                    setState(() => _mediaError = null);
+                    _showSourcePicker(isVideo: false);
+                  },
+                  hasError: _mediaError != null && _selectedImages.isEmpty,
                 ),
             ],
           ),
@@ -761,26 +1157,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     if (path.startsWith('http')) {
       return NetworkImage(path);
     }
-    // On web, path is already a blob URL or we use Image.network
-    // On mobile, we need to use FileImage
+    // On web, path is a blob URL
     if (kIsWeb) {
       return NetworkImage(path);
     } else {
-      // Use dynamic to avoid compile-time dart:io dependency issues if possible
-      // but in Flutter, we can just use conditional imports or this check
-      // For now, since we removed dart:io import, we need to handle it.
-      // Actually, simplest is to use Image.file(File(path)) but we need a provider.
-      // Let's use a helper that doesn't crash.
-      return _getLocalStorageImageProvider(path);
+      // On mobile, use FileImage for local file paths
+      return FileImage(File(path));
     }
-  }
-
-  // Helper to get local storage image provider without direct dart:io import at top level
-  ImageProvider _getLocalStorageImageProvider(String path) {
-    // In a real app we'd use conditional exports, but for this fix
-    // we'll use a safer approach if possible or just re-import inside method
-    // but dart:io is unavailable on web at runtime.
-    return NetworkImage(path); // Fallback for web, will be overridden below for mobile
   }
 
   void _showSourcePicker({required bool isVideo}) {
@@ -912,23 +1295,28 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     }
   }
 
-  Widget _buildAddMediaBox(IconData icon, String label, {double? width, VoidCallback? onTap}) {
+  Widget _buildAddMediaBox(IconData icon, String label, {double? width, VoidCallback? onTap, bool hasError = false}) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         height: 100,
         width: width ?? 100,
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: hasError ? Colors.red.shade50 : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200, style: BorderStyle.solid),
+          border: Border.all(
+            color: hasError ? Colors.red.shade300 : Colors.grey.shade200, 
+            style: BorderStyle.solid,
+            width: hasError ? 1.5 : 1.0,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: AppTheme.primaryColor),
+            Icon(icon, color: hasError ? Colors.red.shade400 : AppTheme.primaryColor),
             const SizedBox(height: 5),
-            Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+            Text(label, style: TextStyle(fontSize: 10, color: hasError ? Colors.red.shade600 : Colors.grey, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -950,7 +1338,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             icon: Icons.title_rounded,
             content: _titleController.text.trim().isEmpty ? '$_selectedCategory Issue' : _titleController.text.trim(),
             color: AppTheme.primaryColor,
-            onEdit: () { prevStep(); prevStep(); },
+            onEdit: () => _goToStep(1),
           ),
           const SizedBox(height: 12),
           _buildReviewCard(
@@ -958,7 +1346,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             icon: Icons.location_on_rounded,
             content: 'Lat: ${_selectedLocation.latitude.toStringAsFixed(6)}\nLong: ${_selectedLocation.longitude.toStringAsFixed(6)}',
             color: Colors.blue,
-            onEdit: () { prevStep(); prevStep(); prevStep(); },
+            onEdit: () => _goToStep(0),
           ),
           const SizedBox(height: 12),
           _buildReviewCard(
@@ -966,7 +1354,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             icon: Icons.category_rounded,
             content: '$_selectedCategory · $_selectedPriority Priority',
             color: Colors.orange,
-            onEdit: () { prevStep(); prevStep(); },
+            onEdit: () => _goToStep(1),
           ),
           const SizedBox(height: 12),
           _buildReviewCard(
@@ -974,7 +1362,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             icon: Icons.description_rounded,
             content: _descriptionController.text.isEmpty ? '(No description entered)' : _descriptionController.text,
             color: Colors.green,
-            onEdit: () { prevStep(); prevStep(); },
+            onEdit: () => _goToStep(1),
           ),
           const SizedBox(height: 12),
           _buildReviewCard(
@@ -982,7 +1370,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             icon: Icons.collections_rounded,
             content: '${_selectedImages.length} Photo${_selectedImages.length == 1 ? '' : 's'}${_selectedVideo != null ? ' & 1 Video' : ''} attached.',
             color: Colors.purple,
-            onEdit: () => prevStep(),
+            onEdit: () => _goToStep(2),
           ),
           const SizedBox(height: 32),
           Container(

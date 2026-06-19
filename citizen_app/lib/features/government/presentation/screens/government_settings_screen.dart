@@ -19,8 +19,10 @@ class _GovernmentSettingsScreenState extends State<GovernmentSettingsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      appBar: AppBar(
-        title: const Text(
+      appBar: AppBar(        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),        title: const Text(
           'System Settings',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),

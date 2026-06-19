@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'task_details_screen.dart';
 import '../../../complaints/domain/complaint_model.dart';
+import '../../../complaints/presentation/screens/complaint_details_screen.dart';
 import '../../../government/data/government_repository.dart';
 
 class MyTasksScreen extends StatefulWidget {
@@ -63,13 +63,13 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     if (_selectedFilter == 'Pending') {
       return list.where((c) {
         final status = c.status.toLowerCase();
-        return status == 'submitted' || status == 'pending' || status == 'under_review' || status == 'team_assigned';
+        return status == 'submitted' || status == 'pending' || status == 'under_review';
       }).toList();
     }
     if (_selectedFilter == 'In Progress') {
       return list.where((c) {
         final status = c.status.toLowerCase();
-        return status == 'repair_started' || status == 'team_assigned';
+        return status == 'team_assigned' || status == 'repair_started' || status == 'repair_in_progress';
       }).toList();
     }
     // Completed
@@ -271,29 +271,34 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     Color statusColor = const Color(0xFFE67E00);
     Color statusBg = const Color(0xFFFFF3E0);
 
-    if (complaint.status == 'repair_started') {
+    final lowerStatus = complaint.status.toLowerCase();
+    if (lowerStatus == 'team_assigned' || lowerStatus == 'repair_started' || lowerStatus == 'repair_in_progress') {
       status = 'In Progress';
       statusColor = _blue;
       statusBg = const Color(0xFFEEF3FF);
-    } else if (complaint.status == 'repair_completed' || complaint.status == 'verified_closed') {
+    } else if (lowerStatus == 'repair_completed' || lowerStatus == 'verified_closed') {
       status = 'Completed';
       statusColor = Colors.green;
       statusBg = Colors.green.shade50;
     }
 
-    final address = complaint.location['address'] ?? 'Unknown Location';
+    final locationText = complaint.location['address'] ?? complaint.location['area'] ?? 'Unknown location';
+    final hasLocation = complaint.location['area'] != null || complaint.location['address'] != null;
+    final locationBadge = hasLocation ? 'Verified location' : 'Location unknown';
     final teamName = complaint.assignedTeamName?.isNotEmpty == true
         ? complaint.assignedTeamName!
         : (complaint.assignedTeamId ?? 'Unassigned');
-    final statusLabel = complaint.status == 'repair_started'
+    final statusLabel = lowerStatus == 'team_assigned' || lowerStatus == 'repair_started' || lowerStatus == 'repair_in_progress'
         ? 'In Progress'
-        : complaint.status == 'repair_completed' || complaint.status == 'verified_closed'
+        : lowerStatus == 'repair_completed' || lowerStatus == 'verified_closed'
             ? 'Completed'
             : 'Pending';
 
     return GestureDetector(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => TaskDetailsScreen(complaint: complaint))),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ComplaintDetailsScreen(complaint: complaint)),
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
@@ -307,87 +312,93 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                 offset: const Offset(0, 3))
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFEEF3FF),
-                  borderRadius: BorderRadius.circular(12)),
-              child:
-                  Icon(icon, color: _blue, size: 22),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFEEF3FF),
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Icon(icon, color: _blue, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(complaint.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF1A1A2E))),
+                      const SizedBox(height: 6),
+                      Text('$locationBadge near $locationText${_coordsString(complaint)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(status,
+                      style: TextStyle(
+                          color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(complaint.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF1A1A2E))),
-                  const SizedBox(height: 2),
-                  Text(address,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text('${complaint.priority} Priority',
-                      style: TextStyle(
-                          color: priorityColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Text('Team: $teamName',
-                      style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text('Status: $statusLabel',
-                      style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500)),
-                  if (complaint.status == 'repair_completed' || complaint.status == 'verified_closed')
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Completed by your team',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: priorityColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${complaint.priority[0].toUpperCase()}${complaint.priority.substring(1)} Priority',
+                    style: TextStyle(color: priorityColor, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Team: $teamName',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Text(status,
-                  style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
-            ),
+            const SizedBox(height: 8),
+            Text('Status: $statusLabel', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
           ],
         ),
       ),
     );
+  }
+
+  String _coordsString(Complaint complaint) {
+    try {
+      final lat = complaint.location['lat'] ?? complaint.location['latitude'] ?? complaint.location['latitude'];
+      final lng = complaint.location['lng'] ?? complaint.location['longitude'] ?? complaint.location['lon'];
+      if (lat != null && lng != null) {
+        return ' (${lat.toString()}, ${lng.toString()})';
+      }
+    } catch (_) {}
+    return '';
   }
 }

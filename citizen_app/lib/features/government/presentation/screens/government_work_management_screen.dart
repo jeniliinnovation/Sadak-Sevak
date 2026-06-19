@@ -73,21 +73,25 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
       final matchesSearch = work.title.toLowerCase().contains(query) ||
           work.id.toLowerCase().contains(query) ||
           work.team.toLowerCase().contains(query);
-      final matchesStatus = selectedStatus == 'All Status' || work.status.toLowerCase() == selectedStatus.toLowerCase();
+      final matchesStatus = selectedStatus == 'All Status' ||
+          _getWorkStatusCategory(work.status).toLowerCase() == selectedStatus.toLowerCase();
       final matchesMonth = selectedMonth == 'All Month' || work.date.startsWith(selectedMonth);
       return matchesSearch && matchesStatus && matchesMonth;
     }).toList();
     final teamProgress = _groupTeamProgress(filteredWorks);
     final totalComplaints = filteredWorks.length;
-    final completedComplaints = filteredWorks.where((work) => work.status.toLowerCase() == 'completed').length;
+    final completedComplaints = filteredWorks.where((work) => _getWorkStatusCategory(work.status).toLowerCase() == 'complete').length;
+    final inProgressComplaints = filteredWorks.where((work) => _getWorkStatusCategory(work.status).toLowerCase() == 'in progress').length;
+    final pendingComplaints = filteredWorks.where((work) => _getWorkStatusCategory(work.status).toLowerCase() == 'pending').length;
     final workDonePercent = totalComplaints > 0 ? (completedComplaints / totalComplaints * 100).round() : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          // Orange Gradient Header with Search & Filters
-          FadeInDown(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Orange Gradient Header with Search & Filters
+            FadeInDown(
             duration: const Duration(milliseconds: 400),
             child: Container(
               width: double.infinity,
@@ -146,50 +150,36 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Total Complaints', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$totalComplaints',
-                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 18),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$totalComplaints',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Work Done', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$workDonePercent%',
-                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 4),
+                        Divider(color: Colors.white.withOpacity(0.4), thickness: 1),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildMiniHeaderStat('Pending', pendingComplaints.toString()),
+                            _buildMiniHeaderStat('In Progress', inProgressComplaints.toString()),
+                            _buildMiniHeaderStat('Completed', completedComplaints.toString()),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   // Search Bar
@@ -247,10 +237,10 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                             const PopupMenuItem<String>(value: 'All Status', child: Text('All Status', style: TextStyle(color: Colors.black87))),
+                            const PopupMenuItem<String>(value: 'Pending', child: Text('Pending', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'In Progress', child: Text('In Progress', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Completed', child: Text('Completed', style: TextStyle(color: Colors.black87))),
+                            const PopupMenuItem<String>(value: 'Complete', child: Text('Complete', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'On Hold', child: Text('On Hold', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Assigned', child: Text('Assigned', style: TextStyle(color: Colors.black87))),
                           ],
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -336,6 +326,7 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
           ),
         ],
       ),
+    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},
         backgroundColor: primaryOrange,
@@ -373,7 +364,6 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
       itemCount: list.length,
       itemBuilder: (context, index) {
         final team = list[index];
-        final double progressVal = team.averageProgress / 100.0;
 
         return FadeInUp(
           duration: const Duration(milliseconds: 300),
@@ -396,37 +386,62 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  team.teamName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF263238),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '#${index + 1}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFF4511E),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        team.teamName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF263238),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 12),
                 Text(
                   '${team.taskCount} tasks • ${team.completedCount} completed',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 16),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: progressVal,
-                          color: team.averageProgress == 100 ? Colors.green : const Color(0xFFF4511E),
-                          backgroundColor: Colors.grey.shade100,
-                          minHeight: 8,
-                        ),
-                      ),
+                    _buildTeamStatTile(
+                      '${team.taskCount}',
+                      'Total',
+                      const Color(0xFFFFF3E0),
+                      const Color(0xFFF4511E),
                     ),
-                    const SizedBox(width: 16),
-                    Text(
-                      '${team.averageProgress.toStringAsFixed(0)}%',
-                      style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF263238), fontSize: 14),
+                    _buildTeamStatTile(
+                      '${team.completedCount}',
+                      'Completed',
+                      const Color(0xFFE8F5E9),
+                      const Color(0xFF43A047),
+                    ),
+                    _buildTeamStatTile(
+                      '${team.taskCount - team.completedCount}',
+                      'Pending',
+                      const Color(0xFFE3F2FD),
+                      const Color(0xFF1E88E5),
                     ),
                   ],
                 ),
@@ -435,6 +450,63 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMiniHeaderStat(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeamStatTile(String value, String label, Color bgColor, Color valueColor) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: valueColor,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF546E7A),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -457,20 +529,25 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
   }
 
   Widget _buildStatusBadge(String status) {
+    final displayStatus = _getWorkStatusCategory(status);
     Color color;
     Color bgColor;
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (displayStatus.toLowerCase()) {
+      case 'complete':
         color = const Color(0xFF43A047);
         bgColor = const Color(0xFFE8F5E9);
         break;
       case 'in progress':
-        color = const Color(0xFFF4511E);
-        bgColor = const Color(0xFFFFF3E0);
+        color = const Color(0xFF1E88E5);
+        bgColor = const Color(0xFFE3F2FD);
         break;
       case 'on hold':
         color = const Color(0xFFFB8C00);
         bgColor = const Color(0xFFFFFDE7);
+        break;
+      case 'pending':
+        color = const Color(0xFFF4511E);
+        bgColor = const Color(0xFFFFF3E0);
         break;
       default:
         color = const Color(0xFF78909C);
@@ -483,7 +560,7 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        status,
+        displayStatus,
         style: TextStyle(
           color: color,
           fontSize: 11,
@@ -491,6 +568,20 @@ class _GovernmentWorkManagementScreenState extends State<GovernmentWorkManagemen
         ),
       ),
     );
+  }
+
+  String _getWorkStatusCategory(String status) {
+    final lower = status.toLowerCase();
+    if (lower == 'repair_completed' || lower == 'verified_closed' || lower == 'completed') {
+      return 'Complete';
+    }
+    if (lower == 'team_assigned' || lower == 'repair_started' || lower == 'repair_in_progress' || lower == 'in progress') {
+      return 'In Progress';
+    }
+    if (lower == 'submitted' || lower == 'pending' || lower == 'under_review' || lower == 'pending action' || lower == 'pending action') {
+      return 'Pending';
+    }
+    return status.replaceAll('_', ' ').toLowerCase() == 'on hold' ? 'On Hold' : 'Pending';
   }
 }
 

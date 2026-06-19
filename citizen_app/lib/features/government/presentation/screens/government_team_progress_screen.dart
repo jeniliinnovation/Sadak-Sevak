@@ -70,17 +70,30 @@ class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScr
       final matchesSearch = work.title.toLowerCase().contains(query) ||
           work.id.toLowerCase().contains(query) ||
           work.team.toLowerCase().contains(query);
-      final matchesStatus = selectedStatus == 'All Status' || work.status.toLowerCase() == selectedStatus.toLowerCase();
+      final matchesStatus = selectedStatus == 'All Status' || _getWorkStatusCategory(work.status).toLowerCase() == selectedStatus.toLowerCase();
       final matchesMonth = selectedMonth == 'All Month' || work.date.startsWith(selectedMonth);
       return matchesSearch && matchesStatus && matchesMonth;
     }).toList();
     final teamProgress = _groupTeamProgress(filteredWorks);
     final totalComplaints = filteredWorks.length;
-    final completedComplaints = filteredWorks.where((work) => work.status.toLowerCase() == 'completed').length;
+    final completedComplaints = filteredWorks.where((work) => _getWorkStatusCategory(work.status).toLowerCase() == 'complete').length;
     final workDonePercent = totalComplaints > 0 ? (completedComplaints / totalComplaints * 100).round() : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Team Progress',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: Column(
         children: [
           FadeInDown(
@@ -240,7 +253,9 @@ class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScr
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                             const PopupMenuItem<String>(value: 'All Status', child: Text('All Status', style: TextStyle(color: Colors.black87))),
+                            const PopupMenuItem<String>(value: 'Pending', child: Text('Pending', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'In Progress', child: Text('In Progress', style: TextStyle(color: Colors.black87))),
+                            const PopupMenuItem<String>(value: 'Complete', child: Text('Complete', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'Completed', child: Text('Completed', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'On Hold', child: Text('On Hold', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'Assigned', child: Text('Assigned', style: TextStyle(color: Colors.black87))),
@@ -436,7 +451,7 @@ class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScr
       final entry = map.putIfAbsent(teamName, () => _TeamProgress(teamName: teamName));
       entry.taskCount += 1;
       entry.totalProgress += work.progress;
-      if (work.status.toLowerCase() == 'completed') {
+      if (_getWorkStatusCategory(work.status).toLowerCase() == 'complete') {
         entry.completedCount += 1;
       }
     }
@@ -448,20 +463,25 @@ class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScr
   }
 
   Widget _buildStatusBadge(String status) {
+    final displayStatus = _getWorkStatusCategory(status);
     Color color;
     Color bgColor;
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (displayStatus.toLowerCase()) {
+      case 'complete':
         color = const Color(0xFF43A047);
         bgColor = const Color(0xFFE8F5E9);
         break;
       case 'in progress':
-        color = const Color(0xFFF4511E);
-        bgColor = const Color(0xFFFFF3E0);
+        color = const Color(0xFF1E88E5);
+        bgColor = const Color(0xFFE3F2FD);
         break;
       case 'on hold':
         color = const Color(0xFFFB8C00);
         bgColor = const Color(0xFFFFFDE7);
+        break;
+      case 'pending':
+        color = const Color(0xFFF4511E);
+        bgColor = const Color(0xFFFFF3E0);
         break;
       default:
         color = const Color(0xFF78909C);
@@ -474,7 +494,7 @@ class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScr
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        status,
+        displayStatus,
         style: TextStyle(
           color: color,
           fontSize: 11,
@@ -482,6 +502,20 @@ class _GovernmentTeamProgressScreenState extends State<GovernmentTeamProgressScr
         ),
       ),
     );
+  }
+
+  String _getWorkStatusCategory(String status) {
+    final lower = status.toLowerCase();
+    if (lower == 'repair_completed' || lower == 'verified_closed' || lower == 'completed') {
+      return 'Complete';
+    }
+    if (lower == 'team_assigned' || lower == 'repair_started' || lower == 'repair_in_progress' || lower == 'in progress') {
+      return 'In Progress';
+    }
+    if (lower == 'submitted' || lower == 'pending' || lower == 'under_review') {
+      return 'Pending';
+    }
+    return lower == 'on hold' ? 'On Hold' : 'Pending';
   }
 }
 

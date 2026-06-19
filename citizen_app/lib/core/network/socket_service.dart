@@ -1,5 +1,6 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'api_constants.dart';
 
 class SocketService {
@@ -11,6 +12,19 @@ class SocketService {
   IO.Socket? socket;
   bool isConnected = false;
   final ValueNotifier<bool> connectionNotifier = ValueNotifier<bool>(false);
+  
+  StreamController<dynamic>? _notificationController;
+  StreamController<dynamic> get _getController {
+    _notificationController ??= StreamController<dynamic>.broadcast();
+    return _notificationController!;
+  }
+  Stream<dynamic> get notificationStream => _getController.stream;
+
+  List<Function(dynamic)>? _notificationCallbacks;
+  List<Function(dynamic)> get _getCallbacks {
+    _notificationCallbacks ??= [];
+    return _notificationCallbacks!;
+  }
 
   void init(String token) {
     if (socket != null && isConnected) return;
@@ -45,6 +59,19 @@ class SocketService {
       connectionNotifier.value = false;
     });
 
+    socket!.off('newNotification');
+    socket!.on('newNotification', (data) {
+      debugPrint('Socket received newNotification event: $data');
+      _getController.add(data);
+      for (final cb in List<Function(dynamic)>.from(_getCallbacks)) {
+        try {
+          cb(data);
+        } catch (e) {
+          debugPrint('Error running socket notification callback: $e');
+        }
+      }
+    });
+
     socket!.connect();
   }
 
@@ -57,10 +84,27 @@ class SocketService {
     debugPrint('Emitted joinRoom for: $complaintId');
   }
 
+  void joinUserRoom(String userId) {
+    if (socket == null) {
+      debugPrint('Cannot join user room: Socket is not initialized');
+      return;
+    }
+    socket!.emit('joinUserRoom', {'userId': userId});
+    debugPrint('Emitted joinUserRoom for: $userId');
+  }
+
   void leaveRoom(String complaintId) {
     if (socket == null) return;
     socket!.emit('leaveRoom', {'complaintId': complaintId});
     debugPrint('Emitted leaveRoom for: $complaintId');
+  }
+
+  void listenToNotifications(Function(dynamic) onNewNotification) {
+    _getCallbacks.add(onNewNotification);
+  }
+
+  void stopListeningToNotifications() {
+    _getCallbacks.clear();
   }
 
   void sendMessage(String complaintId, String userId, String content) {

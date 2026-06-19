@@ -3,6 +3,7 @@ const router = express.Router();
 const Complaint = require('../models/Complaint');
 const Contractor = require('../models/Contractor');
 const User = require('../models/User');
+const WorkOrder = require('../models/WorkOrder');
 const { GovernmentAdmin, RolesLegend, SummaryTable } = require('../models/AdminModels');
 const { protect, authorize } = require('../middleware/auth');
 const { Op } = require('sequelize');
@@ -119,6 +120,8 @@ router.get('/complaints', protect, async (req, res) => {
   res.json(complaints);
 });
 
+const { sendNotification } = require('../utils/notifications');
+
 router.put('/complaints/:id/assign', protect, authorize('admin', 'department_head', 'government', 'team_member'), async (req, res) => {
   const complaint = await Complaint.findByPk(req.params.id);
   if (!complaint) return res.status(404).json({ error: 'Not found' });
@@ -131,6 +134,32 @@ router.put('/complaints/:id/assign', protect, authorize('admin', 'department_hea
       { model: User, as: 'team', attributes: ['name'] }
     ]
   });
+
+  // Create notifications and send live
+  const io = req.app.get('io');
+  if (io) {
+    // Notify the citizen
+    if (complaint.citizenId) {
+      await sendNotification(
+        io,
+        complaint.citizenId,
+        'Field Team Assigned',
+        `A field team has been assigned to resolve your report: "${complaint.title}".`,
+        'status_update'
+      );
+    }
+    // Notify the assigned team member
+    if (complaint.assignedTeamId) {
+      await sendNotification(
+        io,
+        complaint.assignedTeamId,
+        'New Task Assigned',
+        `You have been assigned to repair: "${complaint.title}".`,
+        'status_update'
+      );
+    }
+  }
+
   res.json(complaint);
 });
 
@@ -171,6 +200,36 @@ router.post('/contractors', protect, authorize('admin'), async (req, res) => {
   res.status(201).json(data);
 });
 
+router.put('/contractors/:id', protect, authorize('admin', 'department_head'), async (req, res) => {
+  try {
+    const contractor = await Contractor.findByPk(req.params.id);
+    if (!contractor) return res.status(404).json({ error: 'Contractor not found' });
+    const { status, rejectionReason, companyName, specialization, contactPerson, phone, rating } = req.body;
+    if (status) contractor.status = status;
+    if (rejectionReason !== undefined) contractor.rejectionReason = rejectionReason;
+    if (companyName) contractor.companyName = companyName;
+    if (specialization) contractor.specialization = specialization;
+    if (contactPerson) contractor.contactPerson = contactPerson;
+    if (phone) contractor.phone = phone;
+    if (rating !== undefined) contractor.rating = rating;
+    await contractor.save();
+    res.json(contractor);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.delete('/contractors/:id', protect, authorize('admin'), async (req, res) => {
+  try {
+    const contractor = await Contractor.findByPk(req.params.id);
+    if (!contractor) return res.status(404).json({ error: 'Contractor not found' });
+    await contractor.destroy();
+    res.json({ message: 'Contractor deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * @swagger
  * /api/admin/government:
@@ -199,6 +258,86 @@ router.get('/government', protect, async (req, res) => {
 router.get('/roles', async (req, res) => {
   const data = await RolesLegend.findAll();
   res.json(data);
+});
+
+router.get('/work-orders', protect, async (req, res) => {
+  try {
+    const workOrders = await WorkOrder.findAll({
+      include: [
+        { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'createdBy', attributes: ['id', 'name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(workOrders);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/work-orders', protect, authorize('admin', 'department_head'), async (req, res) => {
+  try {
+    const workOrder = await WorkOrder.create({
+      ...req.body,
+      createdById: req.user.id
+    });
+    await workOrder.reload({
+      include: [
+        { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'createdBy', attributes: ['id', 'name'] }
+      ]
+    });
+    res.status(201).json(workOrder);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.get('/work-orders/:id', protect, async (req, res) => {
+  try {
+    const workOrder = await WorkOrder.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'createdBy', attributes: ['id', 'name'] }
+      ]
+    });
+    if (!workOrder) return res.status(404).json({ error: 'Work order not found' });
+    res.json(workOrder);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/work-orders/:id', protect, authorize('admin', 'department_head'), async (req, res) => {
+  try {
+    const workOrder = await WorkOrder.findByPk(req.params.id);
+    if (!workOrder) return res.status(404).json({ error: 'Work order not found' });
+    await workOrder.update(req.body);
+    await workOrder.reload({
+      include: [
+        { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'createdBy', attributes: ['id', 'name'] }
+      ]
+    });
+    res.json(workOrder);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.delete('/work-orders/:id', protect, authorize('admin'), async (req, res) => {
+  try {
+    const workOrder = await WorkOrder.findByPk(req.params.id);
+    if (!workOrder) return res.status(404).json({ error: 'Work order not found' });
+    await workOrder.destroy();
+    res.json({ message: 'Work order deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/audit-logs', protect, async (req, res) => {
+  res.json([]);
 });
 
 /**

@@ -24,8 +24,8 @@ class SadakSevakApp extends StatelessWidget {
       title: 'Sadak Sevak - Citizen',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      darkTheme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
       home: const SplashScreen(),
     );
   }

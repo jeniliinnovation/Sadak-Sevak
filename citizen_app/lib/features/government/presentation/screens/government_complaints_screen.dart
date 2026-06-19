@@ -236,14 +236,8 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
       final matchesSearch = complaint.title.toLowerCase().contains(_searchController.text.toLowerCase()) ||
           complaint.id.toLowerCase().contains(_searchController.text.toLowerCase());
       
-      // Formatting status to match UI filters if needed, but assuming exact match or mapping
-      // UI filters: 'All Status', 'In Progress', 'Assigned', 'Resolved'
-      String compStatus = '';
-      if (complaint.status == 'repair_started' || complaint.status == 'in_progress') compStatus = 'In Progress';
-      else if (complaint.status == 'team_assigned') compStatus = 'Assigned';
-      else if (complaint.status == 'verified_closed' || complaint.status == 'repair_completed') compStatus = 'Resolved';
-      else compStatus = complaint.status; // fallback
-
+      // Map backend status to government UI status groups
+      String compStatus = _getGovernmentStatusCategory(complaint.status);
       final matchesStatus = selectedStatus == 'All Status' || compStatus.toLowerCase() == selectedStatus.toLowerCase();
       
       String catKey = selectedCategory;
@@ -257,10 +251,11 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          // Orange Gradient Header with Search & Filters
-          FadeInDown(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Orange Gradient Header with Search & Filters
+            FadeInDown(
             duration: const Duration(milliseconds: 400),
             child: Container(
               width: double.infinity,
@@ -407,9 +402,9 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                             const PopupMenuItem<String>(value: 'All Status', child: Text('All Status', style: TextStyle(color: Colors.black87))),
+                            const PopupMenuItem<String>(value: 'Pending', child: Text('Pending', style: TextStyle(color: Colors.black87))),
                             const PopupMenuItem<String>(value: 'In Progress', child: Text('In Progress', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Assigned', child: Text('Assigned', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Resolved', child: Text('Resolved', style: TextStyle(color: Colors.black87))),
+                            const PopupMenuItem<String>(value: 'Complete', child: Text('Complete', style: TextStyle(color: Colors.black87))),
                           ],
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -448,12 +443,20 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
                           offset: const Offset(0, 48),
                           color: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(value: 'All Category', child: Text('All Category', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Potholes', child: Text('Potholes', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Drainage', child: Text('Drainage', style: TextStyle(color: Colors.black87))),
-                            const PopupMenuItem<String>(value: 'Road Damage', child: Text('Road Damage', style: TextStyle(color: Colors.black87))),
-                          ],
+                          itemBuilder: (BuildContext context) {
+                            final Set<String> categoriesSet = {'All Category'};
+                            for (var c in _complaints) {
+                              if (c.category.isNotEmpty) {
+                                categoriesSet.add(c.category);
+                              }
+                            }
+                            return categoriesSet.map((cat) {
+                              return PopupMenuItem<String>(
+                                value: cat,
+                                child: Text(cat, style: const TextStyle(color: Colors.black87)),
+                              );
+                            }).toList();
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
@@ -610,6 +613,22 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
                                   color: Color(0xFF263238),
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE1F5FE),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  complaint.category.isNotEmpty ? complaint.category : 'General',
+                                  style: const TextStyle(
+                                    color: Color(0xFF0277BD),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 14),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -618,7 +637,7 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
                                     children: [
                                       _buildPriorityBadge(complaint.priority),
                                       const SizedBox(width: 8),
-                                      _buildStatusBadge(complaint.status),
+                                      _buildStatusBadge(_getGovernmentDisplayStatus(complaint.status)),
                                     ],
                                   ),
                                   Row(
@@ -647,6 +666,7 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -687,13 +707,17 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
     Color color;
     Color bgColor;
     switch (status.toLowerCase()) {
-      case 'resolved':
+      case 'complete':
         color = const Color(0xFF43A047);
         bgColor = const Color(0xFFE8F5E9);
         break;
       case 'in progress':
         color = const Color(0xFF1E88E5);
         bgColor = const Color(0xFFE3F2FD);
+        break;
+      case 'pending':
+        color = const Color(0xFFF4511E);
+        bgColor = const Color(0xFFFFF3E0);
         break;
       default:
         color = const Color(0xFF78909C);
@@ -714,5 +738,20 @@ class _GovernmentComplaintsScreenState extends State<GovernmentComplaintsScreen>
         ),
       ),
     );
+  }
+
+  String _getGovernmentStatusCategory(String status) {
+    final lower = status.toLowerCase();
+    if (lower == 'repair_completed' || lower == 'verified_closed') {
+      return 'Complete';
+    }
+    if (lower == 'team_assigned' || lower == 'repair_started' || lower == 'repair_in_progress') {
+      return 'In Progress';
+    }
+    return 'Pending';
+  }
+
+  String _getGovernmentDisplayStatus(String status) {
+    return _getGovernmentStatusCategory(status);
   }
 }

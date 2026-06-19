@@ -20,7 +20,7 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
   bool _isLoading = true;
   String _userRole = 'citizen';
   String _selectedListType = 'my';
-  String _selectedStatus = 'pending';
+  String _selectedStatus = 'all';
   String _userSearchTerm = '';
 
   @override
@@ -67,19 +67,33 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
       appBar: AppBar(
         title: Text(
           _selectedListType == 'all' ? 'All Complaints' : 'My Complaints',
-          style: const TextStyle(color: AppTheme.secondaryColor, fontWeight: FontWeight.bold, fontSize: 20),
+          style: const TextStyle(
+            color: AppTheme.secondaryColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.secondaryColor, size: 20), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppTheme.secondaryColor,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12.0,
+                    horizontal: 16,
+                  ),
                   child: Column(
                     children: [
                       _buildListTypeSwitcher(),
@@ -113,12 +127,7 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
               if (_selectedListType != value) {
                 setState(() {
                   _selectedListType = value;
-                  if (_selectedListType == 'my' && !['all', 'pending', 'in_progress', 'complete'].contains(_selectedStatus)) {
-                    _selectedStatus = 'pending';
-                  }
-                  if (_selectedListType == 'all' && !['pending', 'citizen', 'team', 'govt'].contains(_selectedStatus)) {
-                    _selectedStatus = 'pending';
-                  }
+                  _selectedStatus = 'all';
                 });
                 await _fetchComplaints();
               }
@@ -129,7 +138,11 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
               decoration: BoxDecoration(
                 color: isSelected ? AppTheme.primaryColor : Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200),
+                border: Border.all(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : Colors.grey.shade200,
+                ),
               ),
               child: Center(
                 child: Text(
@@ -150,19 +163,12 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
   }
 
   Widget _buildStatusSwitcher() {
-    final items = _selectedListType == 'all'
-        ? [
-            {'value': 'pending', 'label': 'Pending'},
-            {'value': 'citizen', 'label': 'Citizen'},
-            {'value': 'team', 'label': 'Team Field'},
-            {'value': 'govt', 'label': 'Government'},
-          ]
-        : [
-            {'value': 'all', 'label': 'All'},
-            {'value': 'pending', 'label': 'Pending'},
-            {'value': 'in_progress', 'label': 'In Progress'},
-            {'value': 'complete', 'label': 'Complete'},
-          ];
+    final items = [
+      {'value': 'all', 'label': 'All'},
+      {'value': 'pending', 'label': 'Pending'},
+      {'value': 'in_progress', 'label': 'In Progress'},
+      {'value': 'complete', 'label': 'Complete'},
+    ];
 
     return Row(
       children: items.map((item) {
@@ -178,7 +184,11 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
               decoration: BoxDecoration(
                 color: isSelected ? AppTheme.primaryColor : Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200),
+                border: Border.all(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : Colors.grey.shade200,
+                ),
               ),
               child: Center(
                 child: Text(
@@ -202,7 +212,8 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
     final filtered = _complaints.where((r) {
       final statusMatch = statuses == null || statuses.contains(r.status);
       final searchLower = _userSearchTerm.trim().toLowerCase();
-      final userMatch = searchLower.isEmpty ||
+      final userMatch =
+          searchLower.isEmpty ||
           r.title.toLowerCase().contains(searchLower) ||
           r.id.toLowerCase().contains(searchLower) ||
           (r.citizenName?.toLowerCase().contains(searchLower) ?? false);
@@ -214,9 +225,16 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.assignment_late_outlined, size: 64, color: Colors.grey.shade300),
+            Icon(
+              Icons.assignment_late_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 16),
-            Text('No complaints found', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+            Text(
+              'No complaints found',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+            ),
           ],
         ),
       );
@@ -238,31 +256,22 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
   }
 
   Widget _buildComplaintCard(Complaint complaint) {
-    Color statusColor = AppTheme.getStatusColor(complaint.status);
-    IconData statusIcon;
-
-    switch (complaint.status) {
-      case 'submitted':
-        statusIcon = Icons.send_rounded;
-        break;
-      case 'under_review':
-      case 'team_assigned':
-        statusIcon = Icons.engineering_rounded;
-        break;
-      case 'verified_closed':
-      case 'repair_completed':
-        statusIcon = Icons.check_circle_rounded;
-        break;
-      default:
-        statusIcon = Icons.info_outline_rounded;
-    }
+    final displayStatus = _getSimpleStatusLabel(complaint.status);
+    final statusColor = _getSimpleStatusColor(complaint.status);
+    final statusIcon = _getSimpleStatusIcon(complaint.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
         border: Border.all(color: Colors.grey.shade100, width: 1.5),
       ),
       child: Material(
@@ -272,7 +281,10 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ComplaintDetailsScreen(complaint: complaint)),
+              MaterialPageRoute(
+                builder: (context) =>
+                    ComplaintDetailsScreen(complaint: complaint),
+              ),
             );
           },
           child: Padding(
@@ -289,34 +301,69 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
                         const SizedBox(width: 8),
                         Text(
                           '#${complaint.id.length > 8 ? complaint.id.substring(0, 8) : complaint.id}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.secondaryColor),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.secondaryColor,
+                          ),
                         ),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: Text(
-                        complaint.status.replaceAll('_', ' ').toUpperCase(),
-                        style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                        displayStatus,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(complaint.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-                if (complaint.citizenName != null && complaint.citizenName!.isNotEmpty) ...[
+                Text(
+                  complaint.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (complaint.citizenName != null &&
+                    complaint.citizenName!.isNotEmpty) ...[
                   const SizedBox(height: 6),
-                  Text('Reported by: ${complaint.citizenName}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  Text(
+                    'Reported by: ${complaint.citizenName}',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
                 ],
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 12,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(width: 6),
                     Text(
-                      complaint.createdAt != null ? '${complaint.createdAt!.day} ${_getMonth(complaint.createdAt!.month)} ${complaint.createdAt!.year}' : 'Recent',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w400),
+                      complaint.createdAt != null
+                          ? '${complaint.createdAt!.day} ${_getMonth(complaint.createdAt!.month)} ${complaint.createdAt!.year}'
+                          : 'Recent',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ],
                 ),
@@ -332,20 +379,53 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
     if (section == null || section == 'all') return null;
     switch (section) {
       case 'pending':
-        return ['pending', 'submitted'];
+        return ['pending', 'submitted', 'under_review'];
       case 'citizen':
         return ['submitted'];
       case 'team':
-        return ['team_assigned', 'repair_started'];
+        return ['team_assigned', 'repair_started', 'repair_in_progress'];
       case 'govt':
         return ['under_review'];
       case 'in_progress':
-        return ['repair_started'];
+        return ['team_assigned', 'repair_started', 'repair_in_progress'];
       case 'complete':
         return ['repair_completed', 'verified_closed'];
       default:
         return null;
     }
+  }
+
+  String _getSimpleStatusLabel(String status) {
+    final lower = status.toLowerCase();
+    if (lower == 'repair_completed' || lower == 'verified_closed') {
+      return 'COMPLETE';
+    }
+    if (lower == 'team_assigned' || lower == 'repair_started' || lower == 'repair_in_progress') {
+      return 'IN PROGRESS';
+    }
+    return 'PENDING';
+  }
+
+  Color _getSimpleStatusColor(String status) {
+    final lower = status.toLowerCase();
+    if (lower == 'repair_completed' || lower == 'verified_closed') {
+      return Colors.green.shade700;
+    }
+    if (lower == 'team_assigned' || lower == 'repair_started' || lower == 'repair_in_progress') {
+      return Colors.blue.shade700;
+    }
+    return Colors.orange.shade700;
+  }
+
+  IconData _getSimpleStatusIcon(String status) {
+    final lower = status.toLowerCase();
+    if (lower == 'repair_completed' || lower == 'verified_closed') {
+      return Icons.check_circle_rounded;
+    }
+    if (lower == 'team_assigned' || lower == 'repair_started' || lower == 'repair_in_progress') {
+      return Icons.construction_rounded;
+    }
+    return Icons.hourglass_top_rounded;
   }
 
   Widget _buildUserSearchField() {
@@ -370,7 +450,20 @@ class _ComplaintsListScreenState extends State<ComplaintsListScreen> {
   }
 
   String _getMonth(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return months[month - 1];
   }
 }

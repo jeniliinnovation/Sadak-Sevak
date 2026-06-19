@@ -3,6 +3,16 @@ import 'package:sadak_sevak_citizen/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sadak_sevak_citizen/features/auth/data/auth_repository.dart';
 import 'package:sadak_sevak_citizen/features/auth/presentation/screens/auth_screen.dart';
+import 'package:sadak_sevak_citizen/features/home/presentation/screens/notifications_screen.dart';
+
+import 'personal_information_screen.dart';
+import 'my_contributions_screen.dart';
+import 'saved_locations_screen.dart';
+import 'security_privacy_screen.dart';
+import 'change_password_screen.dart';
+import 'language_screen.dart';
+import 'help_faq_screen.dart';
+import 'about_sadak_sevak_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,6 +41,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final rawId = prefs.getString('user_id') ?? '2026';
       _userId = 'ID: #SEVAK${rawId.substring(0, 4).toUpperCase()}';
     });
+
+    try {
+      final profile = await AuthRepository().getProfile();
+      setState(() {
+        _name = profile.name;
+        _email = profile.email;
+        _userId = 'ID: #SEVAK${profile.id.substring(0, 4).toUpperCase()}';
+      });
+    } catch (_) {
+      // Keep cached profile if backend fetch fails.
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -65,10 +86,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF4F8FF),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.primaryColor, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('My Profile', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: AppTheme.primaryColor),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PersonalInformationScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 40),
         child: Column(
           children: [
+            const SizedBox(height: 20),
             _buildHeader(),
             const SizedBox(height: 20),
             _buildSectionTitle('Accounts'),
@@ -76,16 +120,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               context,
               Icons.person_outline_rounded,
               'Personal Information',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PersonalInformationScreen()),
+                );
+              },
             ),
             _buildProfileItem(
               context,
               Icons.volunteer_activism_outlined,
               'My Contributions',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MyContributionsScreen()),
+                );
+              },
             ),
             _buildProfileItem(
               context,
               Icons.location_on_outlined,
               'Saved Locations',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SavedLocationsScreen()),
+                );
+              },
             ),
             const SizedBox(height: 10),
             _buildSectionTitle('Settings'),
@@ -93,24 +155,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
               context,
               Icons.notifications_none_rounded,
               'Notifications',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                );
+              },
             ),
             _buildProfileItem(
               context,
               Icons.security_outlined,
               'Security & Privacy',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SecurityPrivacyScreen()),
+                );
+              },
             ),
-            _buildProfileItem(context, Icons.language_rounded, 'Language'),
+            _buildProfileItem(
+              context,
+              Icons.lock_outline_rounded,
+              'Change Password',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                );
+              },
+            ),
+            _buildProfileItem(
+              context, 
+              Icons.language_rounded, 
+              'Language',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LanguageScreen()),
+                );
+              },
+            ),
             const SizedBox(height: 10),
             _buildSectionTitle('Support'),
             _buildProfileItem(
               context,
               Icons.help_outline_rounded,
               'Help & FAQ',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HelpFAQScreen()),
+                );
+              },
             ),
             _buildProfileItem(
               context,
               Icons.info_outline_rounded,
               'About Sadak-Sevak',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AboutSadakSevakScreen()),
+                );
+              },
             ),
             _buildProfileItem(
               context,
@@ -146,29 +253,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.only(top: 60, bottom: 35, left: 20, right: 20),
-      decoration: const BoxDecoration(
-        color: AppTheme.primaryColor,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(35),
-          bottomRight: Radius.circular(35),
-        ),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: const CircleAvatar(
-              radius: 42,
+              radius: 36,
               backgroundColor: AppTheme.primaryColor,
-              child: Icon(Icons.person, color: Colors.white, size: 50),
+              child: Icon(Icons.person, color: Colors.white, size: 36),
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,23 +288,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   _name,
                   style: const TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppTheme.secondaryColor,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   _userId,
                   style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   _email,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
@@ -201,8 +314,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () {},
             icon: const Icon(
               Icons.edit_note_rounded,
-              color: Colors.white,
-              size: 28,
+              color: AppTheme.primaryColor,
+              size: 26,
             ),
           ),
         ],

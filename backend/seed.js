@@ -99,6 +99,7 @@ const seedData = async () => {
     // 2. CITIZENS
     // ─────────────────────────────────────────
     const userPassword = await hash('user123');
+    const contractorPassword = await hash('contract123');
     const citizen1 = await User.create({
       name: 'John Doe',
       email: 'john@gmail.com',
@@ -123,7 +124,16 @@ const seedData = async () => {
       isVerified: false,
       avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=AK',
     });
+    const contractorUser = await User.create({
+      name: 'Rajesh Contractor',
+      email: 'rajesh.contractor@builder.in',
+      password: contractorPassword,
+      role: 'contractor',
+      isVerified: true,
+      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=RC',
+    });
     console.log('Created 3 citizen users.');
+    console.log('Created contractor user:', contractorUser.email);
 
     // ─────────────────────────────────────────
     // 3. COMPLAINTS
@@ -195,44 +205,63 @@ const seedData = async () => {
     // ─────────────────────────────────────────
     // 4. CONTRACTORS
     // ─────────────────────────────────────────
-    await Contractor.bulkCreate([
+    const contractors = await Contractor.bulkCreate([
+      {
+        companyName: 'Rajesh Contractors',
+        specialization: 'General Road Repair',
+        rating: 4.9,
+        status: 'approved',
+        contactPerson: 'Rajesh Contractor',
+        phone: '+91-9876543210',
+        userId: contractorUser.id,
+      },
       {
         companyName: 'City Road Services Pvt Ltd',
         specialization: 'Road Repair & Resurfacing',
         rating: 4.8,
+        status: 'approved',
       },
       {
         companyName: 'Gujarat Infrastructure Works',
         specialization: 'Drainage & Sewage Systems',
         rating: 4.5,
+        status: 'approved',
       },
       {
         companyName: 'Bright Lights Solutions',
         specialization: 'Street Lighting & Electrical',
         rating: 4.7,
+        status: 'approved',
       },
       {
         companyName: 'PatchPro Civil Contractors',
         specialization: 'Pothole Filling & Patching',
         rating: 4.2,
+        status: 'pending',
       },
       {
         companyName: 'Urban Infrastructure Ltd',
         specialization: 'General Civil Works',
         rating: 4.6,
+        status: 'approved',
       },
       {
         companyName: 'RoadMaster Engineering Co.',
         specialization: 'Road Damage & Resurfacing',
         rating: 4.9,
+        status: 'approved',
       },
     ]);
-    console.log('Created 6 contractors.');
+    console.log('Created 7 contractors (1 linked to contractor user).');
 
     // ─────────────────────────────────────────
     // 5. NOTIFICATIONS (linked to admin user)
     // ─────────────────────────────────────────
+    const raviKumar = govUsers[0];
+    const priyaMehta = govUsers[1];
+
     await Notification.bulkCreate([
+      // Admin Notifications
       {
         title: 'New High Priority Complaint',
         message: 'A new HIGH priority complaint has been submitted for MG Road pothole. Immediate action required.',
@@ -261,36 +290,77 @@ const seedData = async () => {
         isRead: true,
         userId: admin.id,
       },
+      
+      // Citizen Notifications (John Doe)
       {
-        title: 'Team Bravo - Assignment Update',
-        message: 'Team Bravo has been successfully assigned to Block A Drainage repair (WRK-002).',
-        type: 'status_update',
-        isRead: true,
-        userId: admin.id,
-      },
-      {
-        title: 'Monthly Report Ready',
-        message: 'The May 2024 analytics report has been generated. View it in the Analytics section.',
+        title: 'Welcome to Sadak-Sevak',
+        message: 'Thank you for joining our platform. You can now report local road issues, track their progress, and discuss them directly with authorities.',
         type: 'broadcast',
-        isRead: true,
-        userId: admin.id,
+        isRead: false,
+        userId: citizen1.id,
       },
       {
-        title: 'Complaint Escalated',
-        message: 'Complaint CMP-2024-003 has been escalated due to no action taken within 72 hours.',
+        title: 'Complaint Under Review',
+        message: 'Your report "Large Pothole on MG Road" has been successfully received and is now under review by the department.',
+        type: 'status_update',
+        isRead: false,
+        userId: citizen1.id,
+      },
+      {
+        title: 'Update in Discussion Room',
+        message: 'Gov Officer Ravi Kumar posted a new update in your reported issue: "Large Pothole on MG Road".',
+        type: 'comment',
+        isRead: true,
+        userId: citizen1.id,
+      },
+
+      // Gov Department Head Notifications (Ravi Kumar)
+      {
+        title: 'New Complaint Reported',
+        message: 'Citizen John Doe has reported a new Pothole issue on MG Road. Tap to assign a field team.',
+        type: 'status_update',
+        isRead: false,
+        userId: raviKumar.id,
+      },
+      {
+        title: 'Ticket Escalated',
+        message: 'The drainage overflow complaint at Block A (Zone 1) has been escalated to Level 2.',
         type: 'escalation',
         isRead: false,
-        userId: admin.id,
+        userId: raviKumar.id,
       },
       {
-        title: 'New Field Operation Logged',
-        message: 'Team Alpha logged a new road inspection at University Road at 10:30 AM today.',
-        type: 'status_update',
+        title: 'Contractor Directory Updated',
+        message: 'A new contractor "City Road Services Pvt Ltd" has registered on the platform.',
+        type: 'broadcast',
         isRead: true,
-        userId: admin.id,
+        userId: raviKumar.id,
+      },
+
+      // Field Team Notifications (Priya Mehta)
+      {
+        title: 'New Task Assigned',
+        message: 'You have been assigned to repair "Large Pothole on MG Road" (MG Road, Zone 2).',
+        type: 'status_update',
+        isRead: false,
+        userId: priyaMehta.id,
+      },
+      {
+        title: 'Discussion Activity',
+        message: 'Citizen John Doe commented: "I reported this pothole. It is very deep..." in your assigned task.',
+        type: 'comment',
+        isRead: false,
+        userId: priyaMehta.id,
+      },
+      {
+        title: 'Safety Guidelines Update',
+        message: 'Please review the newly published safety guidelines for monsoon road repair operations.',
+        type: 'broadcast',
+        isRead: true,
+        userId: priyaMehta.id,
       },
     ]);
-    console.log('Created 8 notifications for admin.');
+    console.log('Created notifications for Admin, Citizen, Gov Head, and Field Team users.');
 
     // Seed sample chat discussion comments
     const ravi = await User.findOne({ where: { email: 'ravi.kumar@gov.in' } });

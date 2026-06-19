@@ -52,6 +52,7 @@ const { Like, Confirmation } = require('./models/Interactions');
 require('./models/MissingModules');
 require('./models/Area');
 require('./models/AdminModels');
+require('./models/Bid');
 
 
 
@@ -98,6 +99,7 @@ app.use('/api', require('./routes/interactions'));
 app.use('/api/roles', require('./routes/roles'));
 app.use('/api/summary', require('./routes/summary'));
 app.use('/api/areas', require('./routes/areas'));
+app.use('/api/bids', require('./routes/bids'));
 
 
 
@@ -117,9 +119,10 @@ const startServer = async () => {
     
     // Disable foreign key checks for sync
     await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-    await sequelize.sync();
+    const syncOptions = process.env.FORCE_SYNC === 'true' ? { force: true } : {};
+    await sequelize.sync(syncOptions);
     await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-    console.log('Database synced');
+    console.log('Database synced', syncOptions);
 
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

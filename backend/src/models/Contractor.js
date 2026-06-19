@@ -17,6 +17,26 @@ const Contractor = sequelize.define('Contractor', {
   rating: {
     type: DataTypes.FLOAT,
     defaultValue: 5.0
+  },
+  status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'pending'
+  },
+  rejectionReason: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  contactPerson: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  phone: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  userId: {
+    type: DataTypes.CHAR(36),
+    allowNull: true
   }
 }, {
   timestamps: true,

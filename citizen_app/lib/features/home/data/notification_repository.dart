@@ -16,6 +16,15 @@ class NotificationRepository {
     }
   }
 
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _dio.get('notifications/unread-count');
+      return (response.data['count'] as num).toInt();
+    } catch (e) {
+      return 0;
+    }
+  }
+
   Future<void> markAsRead(String id) async {
     try {
       await _dio.put('notifications/$id/read');
@@ -23,4 +32,13 @@ class NotificationRepository {
       rethrow;
     }
   }
+
+  Future<void> markAllAsRead() async {
+    try {
+      await _dio.put('notifications/read-all');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
+

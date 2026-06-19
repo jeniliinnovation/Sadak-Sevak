@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:sadak_sevak_citizen/features/auth/data/auth_repository.dart';
 import 'package:sadak_sevak_citizen/features/auth/presentation/screens/auth_screen.dart';
+import 'package:sadak_sevak_citizen/features/profile/presentation/screens/about_sadak_sevak_screen.dart';
+import 'package:sadak_sevak_citizen/features/profile/presentation/screens/change_password_screen.dart';
+import 'package:sadak_sevak_citizen/features/profile/presentation/screens/personal_information_screen.dart';
 import 'task_history_screen.dart';
 import 'field_team_settings_screen.dart';
 import 'help_and_support_screen.dart';
@@ -15,10 +18,15 @@ class FieldTeamProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: const Color(0xFFF4F8FF),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: _darkBlue, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('My Profile',
             style: TextStyle(
                 color: _darkBlue, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -28,44 +36,61 @@ class FieldTeamProfileScreen extends StatelessWidget {
           children: [
             // ─── Profile Header ─────────────────────────────────────
             FadeInDown(
-              child: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.bottomRight,
+              child: Stack(
+                children: [
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                    child: Column(
                       children: [
-                        const CircleAvatar(
-                          radius: 48,
-                          backgroundImage:
-                              NetworkImage('https://i.pravatar.cc/150?img=12'),
+                        Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            const CircleAvatar(
+                              radius: 48,
+                              backgroundImage:
+                                  NetworkImage('https://i.pravatar.cc/150?img=12'),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                  color: _blue, shape: BoxShape.circle),
+                              child: const Icon(Icons.camera_alt_rounded,
+                                  color: Colors.white, size: 14),
+                            ),
+                          ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                              color: _blue, shape: BoxShape.circle),
-                          child: const Icon(Icons.camera_alt_rounded,
-                              color: Colors.white, size: 14),
-                        ),
+                        const SizedBox(height: 14),
+                        const Text('Ramesh Kumar',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: _darkBlue)),
+                        const SizedBox(height: 4),
+                        Text('Field Team Member',
+                            style:
+                                TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                        const SizedBox(height: 2),
+                        Text('ID: FT-2025-000',
+                            style:
+                                TextStyle(color: Colors.grey.shade400, fontSize: 12)),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    const Text('Ramesh Kumar',
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: _darkBlue)),
-                    const SizedBox(height: 4),
-                    Text('Field Team Member',
-                        style:
-                            TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text('ID: FT-2025-000',
-                        style:
-                            TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.edit, color: _blue),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PersonalInformationScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -139,13 +164,23 @@ class FieldTeamProfileScreen extends StatelessWidget {
                     _menuTile(
                       icon: Icons.person_outline,
                       title: 'Personal Information',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PersonalInformationScreen()),
+                        );
+                      },
                     ),
                     Divider(color: Colors.grey.shade100, height: 1),
                     _menuTile(
                       icon: Icons.lock_outline_rounded,
                       title: 'Change Password',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                        );
+                      },
                     ),
                     Divider(color: Colors.grey.shade100, height: 1),
                     _menuTile(
@@ -181,7 +216,12 @@ class FieldTeamProfileScreen extends StatelessWidget {
                     _menuTile(
                       icon: Icons.info_outline_rounded,
                       title: 'About App',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AboutSadakSevakScreen()),
+                        );
+                      },
                     ),
                     Divider(color: Colors.grey.shade100, height: 1),
                     _menuTile(

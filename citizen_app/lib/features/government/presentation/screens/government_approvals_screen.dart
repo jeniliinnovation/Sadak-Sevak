@@ -86,11 +86,11 @@ class _GovernmentApprovalsScreenState extends State<GovernmentApprovalsScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          // Orange Gradient Header with Search & Filters
-          FadeInDown(
+      backgroundColor: const Color(0xFFF5F5F5),      body: SafeArea(
+        child: Column(
+          children: [
+            // Orange Gradient Header with Search & Filters
+            FadeInDown(
             duration: const Duration(milliseconds: 400),
             child: Container(
               width: double.infinity,
@@ -249,7 +249,8 @@ class _GovernmentApprovalsScreenState extends State<GovernmentApprovalsScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildApprovalsList(List<ApprovalModel> list) {

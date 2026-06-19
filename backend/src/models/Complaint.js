@@ -22,7 +22,7 @@ const Complaint = sequelize.define('Complaint', {
   },
   category: {
     type: DataTypes.STRING,
-    defaultValue: 'General'
+    defaultValue: 'Pothole'
   },
   priority: {
     type: DataTypes.ENUM('Low', 'Medium', 'High', 'Critical'),

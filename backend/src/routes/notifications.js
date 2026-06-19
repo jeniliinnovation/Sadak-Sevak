@@ -34,6 +34,42 @@ router.get('/', protect, async (req, res) => {
 
 /**
  * @swagger
+ * /api/notifications/unread-count:
+ *   get:
+ *     summary: Get count of unread notifications
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/unread-count', protect, async (req, res) => {
+  try {
+    const count = await Notification.count({ where: { userId: req.user.id, isRead: false } });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/notifications/read-all:
+ *   put:
+ *     summary: Mark all notifications as read
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/read-all', protect, async (req, res) => {
+  try {
+    await Notification.update({ isRead: true }, { where: { userId: req.user.id, isRead: false } });
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
  * /api/notifications/{id}/read:
  *   put:
  *     summary: Mark a single notification as read

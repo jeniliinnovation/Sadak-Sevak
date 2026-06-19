@@ -21,7 +21,7 @@ const router = express.Router();
  *               name: { type: string, example: "John Doe" }
  *               email: { type: string, example: "john@gmail.com" }
  *               password: { type: string, example: "password123" }
- *               role: { type: string, enum: [citizen, team_member, department_head, admin], default: citizen }
+ *               role: { type: string, enum: [citizen, team_member, department_head, admin, contractor], default: citizen }
  *     responses:
  *       201: { description: User created }
  */
@@ -104,6 +104,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt:', { email, password });
     const user = await User.findOne({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });

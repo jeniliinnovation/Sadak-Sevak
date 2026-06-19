@@ -1,222 +1,324 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-
-import 'package:sadak_sevak_citizen/features/government/data/government_repository.dart';
-import 'package:sadak_sevak_citizen/features/government/domain/models/notification_model.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
+import 'package:sadak_sevak_citizen/core/network/socket_service.dart';
+import 'package:sadak_sevak_citizen/features/home/data/notification_repository.dart';
+import 'package:sadak_sevak_citizen/features/home/domain/notification_model.dart';
 
 class GovernmentNotificationsScreen extends StatefulWidget {
   const GovernmentNotificationsScreen({super.key});
 
   @override
-  State<GovernmentNotificationsScreen> createState() => _GovernmentNotificationsScreenState();
+  State<GovernmentNotificationsScreen> createState() =>
+      _GovernmentNotificationsScreenState();
 }
 
-class _GovernmentNotificationsScreenState extends State<GovernmentNotificationsScreen> {
-  final GovernmentRepository _repository = GovernmentRepository();
-  bool _isLoading = true;
+class _GovernmentNotificationsScreenState
+    extends State<GovernmentNotificationsScreen> {
+  static const Color _orange = Color(0xFFF4511E);
+  static const Color _dark = Color(0xFF1A2332);
+
+  final _repo = NotificationRepository();
   List<NotificationModel> _notifications = [];
+  bool _isLoading = true;
+  bool _isMarkingAll = false;
+  StreamSubscription<dynamic>? _notificationSub;
 
   @override
   void initState() {
     super.initState();
-    _fetchNotifications();
-  }
-
-  Future<void> _fetchNotifications() async {
-    try {
-      final notifications = await _repository.getNotifications();
-      setState(() {
-        _notifications = notifications;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _markAllAsRead() async {
-    // Optimistic UI update
-    setState(() {
-      for (var n in _notifications) {
-        n.isRead = true;
+    _load().then((_) => _markAllAsRead());
+    _notificationSub = SocketService().notificationStream.listen((_) {
+      if (mounted) {
+        _load(silent: true);
       }
     });
-    // In a real app we'd call an API to mark all read
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('All notifications marked as read.'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    const primaryOrange = Color(0xFFF4511E);
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
+  }
 
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
+    try {
+      final data = await _repo.getNotifications();
+      if (mounted) setState(() { _notifications = data; _isLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _markAsRead(NotificationModel n) async {
+    if (n.isRead) return;
+    try {
+      await _repo.markAsRead(n.id);
+      if (mounted) {
+        setState(() {
+          _notifications.removeWhere((x) => x.id == n.id);
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _markAllAsRead() async {
+    if (_isMarkingAll) return;
+    setState(() => _isMarkingAll = true);
+    try {
+      await _repo.markAllAsRead();
+      if (mounted) {
+        setState(() {
+          _notifications = _notifications.map((n) => NotificationModel(
+            id: n.id, title: n.title, message: n.message,
+            type: n.type, isRead: true, createdAt: n.createdAt,
+          )).toList();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Row(children: [
+            Icon(Icons.done_all_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('All notifications marked as read'),
+          ]),
+          backgroundColor: _orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
+        ));
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _isMarkingAll = false);
+    }
+  }
+
+  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        title: const Text(
-          'Notifications',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _markAllAsRead,
-            child: const Text(
-              'Mark all as read',
-              style: TextStyle(color: primaryOrange, fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          )
-        ],
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: _dark),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            const Text('Notifications',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: _dark)),
+            if (_unreadCount > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _orange,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text('$_unreadCount',
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (_unreadCount > 0)
+            TextButton.icon(
+              onPressed: _isMarkingAll ? null : _markAllAsRead,
+              icon: _isMarkingAll
+                  ? const SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: _orange))
+                  : const Icon(Icons.done_all_rounded, size: 16, color: _orange),
+              label: const Text('Mark all read',
+                  style: TextStyle(color: _orange, fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+        ],
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: primaryOrange))
-        : _notifications.isEmpty 
-          ? const Center(child: Text('No notifications'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _notifications.length,
-              itemBuilder: (context, index) {
-                final notification = _notifications[index];
-                final isRead = notification.isRead;
-                
-                // Simulate grouping by day based on index for demo purposes
-                final isToday = index < 2; 
-                final showHeader = index == 0 || index == 2;
-                final headerText = isToday ? 'Today' : 'Earlier';
-
-                Widget card = Dismissible(
-                  key: Key(notification.id),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (direction) {
-                    setState(() {
-                      _notifications.removeAt(index);
-                    });
-                  },
-                  background: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade400,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.centerRight,
-                    child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: _orange))
+          : _notifications.isEmpty
+              ? _buildEmpty()
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  color: _orange,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                    itemCount: _notifications.length,
+                    itemBuilder: (context, index) {
+                      final n = _notifications[index];
+                      return FadeInUp(
+                        delay: Duration(milliseconds: 50 * index),
+                        child: _buildCard(n, index),
+                      );
+                    },
                   ),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isRead ? Colors.white : const Color(0xFFFFF3E0).withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
-                      border: Border.all(color: isRead ? Colors.grey.shade100 : const Color(0xFFFFCC80).withOpacity(0.4)),
-                    ),
-                    child: Row(
+                ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: _orange.withOpacity(0.07),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.notifications_none_rounded,
+                size: 64, color: _orange.withOpacity(0.5)),
+          ),
+          const SizedBox(height: 16),
+          const Text('No notifications',
+              style: TextStyle(
+                  color: _dark, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('New complaints and updates will\nappear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(NotificationModel n, int index) {
+    final isRead = n.isRead;
+    return Dismissible(
+      key: Key('${n.id}_$index'),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => setState(() => _notifications.removeAt(index)),
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        alignment: Alignment.centerRight,
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+      ),
+      child: GestureDetector(
+        onTap: () => _markAsRead(n),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isRead ? Colors.white : n.color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isRead ? Colors.grey.shade100 : n.color.withOpacity(0.25),
+              width: isRead ? 1 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: n.color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(n.icon, color: n.color, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Icon
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: notification.color,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: notification.color.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(notification.icon, color: Colors.white, size: 20),
-                        ),
-                        const SizedBox(width: 16),
-                        // Details
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                notification.title,
+                          child: Text(n.title,
+                              style: TextStyle(
+                                fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
+                                fontSize: 14,
+                                color: _dark,
+                              )),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(_formatTime(n.createdAt),
                                 style: TextStyle(
-                                  fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
-                                  fontSize: 14,
-                                  color: const Color(0xFF263238),
-                                ),
-                              ),
-                              if (notification.message.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  notification.message,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                ),
-                              ],
-                              const SizedBox(height: 6),
-                              Text(
-                                notification.time,
-                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.bold),
+                                    fontSize: 11, color: Colors.grey.shade400)),
+                            if (!isRead) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                width: 8, height: 8,
+                                decoration: BoxDecoration(
+                                    color: _orange, shape: BoxShape.circle),
                               ),
                             ],
-                          ),
+                          ],
                         ),
-                        if (!isRead)
-                          Container(
-                            height: 8,
-                            width: 8,
-                            margin: const EdgeInsets.only(top: 4, left: 8),
-                            decoration: const BoxDecoration(
-                              color: primaryOrange,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
                       ],
                     ),
-                  ),
-                );
-
-                if (showHeader) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, top: 8, bottom: 12),
-                        child: Text(
-                          headerText,
+                    if (n.message.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(n.message,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade500,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      FadeInUp(
-                        duration: const Duration(milliseconds: 300),
-                        delay: Duration(milliseconds: 50 * index),
-                        child: card,
-                      ),
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.4)),
                     ],
-                  );
-                }
-
-                return FadeInUp(
-                  duration: const Duration(milliseconds: 300),
-                  delay: Duration(milliseconds: 50 * index),
-                  child: card,
-                );
-              },
-            ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: n.color.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(_typeLabel(n.type),
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: n.color)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'status_update': return 'Status Update';
+      case 'comment': return 'Comment';
+      case 'escalation': return '⚠ Escalation';
+      case 'broadcast': return 'Announcement';
+      default: return 'Notification';
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return DateFormat('dd MMM').format(dt);
   }
 }

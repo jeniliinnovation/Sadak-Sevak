@@ -3,6 +3,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:dio/dio.dart';
 import 'package:sadak_sevak_citizen/core/theme/app_theme.dart';
 import 'package:sadak_sevak_citizen/features/home/presentation/screens/main_layout.dart';
+import 'package:sadak_sevak_citizen/features/contractor/presentation/screens/contractor_onboarding_screen.dart';
 import '../../data/auth_repository.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   bool isLogin = true;
   bool isLoading = false;
   bool _passwordVisible = false;
+  String _selectedRole = 'citizen'; // 'citizen' or 'contractor'
   final _authRepo = AuthRepository();
   late AnimationController _animController;
 
@@ -45,9 +47,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   void toggleAuthMode() {
     setState(() {
       isLogin = !isLogin;
+      _selectedRole = 'citizen';
       if (!isLogin) {
         _emailController.clear();
         _passwordController.clear();
+        _nameController.clear();
       } else {
         _emailController.text = 'john@gmail.com';
         _passwordController.text = 'user123';
@@ -62,6 +66,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+
+    if (!isLogin && _selectedRole == 'contractor') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ContractorOnboardingScreen(
+            name: _nameController.text.trim(),
+            email: email,
+            password: password,
+          ),
+        ),
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
 
@@ -186,7 +204,41 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   ),
                 ),
 
-                const SizedBox(height: 36),
+                const SizedBox(height: 24),
+
+                // Role selector toggle (signup only)
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: isLogin
+                      ? const SizedBox.shrink()
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Account Type'),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildRoleSelector(
+                                    role: 'citizen',
+                                    label: 'Citizen',
+                                    icon: Icons.person_outline_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildRoleSelector(
+                                    role: 'contractor',
+                                    label: 'Contractor',
+                                    icon: Icons.engineering_outlined,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                ),
 
                 // Name field (signup only)
                 AnimatedSize(
@@ -286,7 +338,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                               ),
                             )
                           : Text(
-                              isLogin ? 'Sign In' : 'Create Account',
+                              isLogin 
+                                  ? 'Sign In' 
+                                  : (_selectedRole == 'contractor' ? 'Continue to Onboarding' : 'Create Account'),
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
@@ -341,12 +395,15 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                             children: [
                               Icon(Icons.tips_and_updates_rounded, color: AppTheme.primaryColor, size: 16),
                               const SizedBox(width: 8),
-                              const Text(
-                                'Test Credentials',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                  fontSize: 13,
+                              Flexible(
+                                child: Text(
+                                  'Test Credentials',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -359,6 +416,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           _credRow('Team', 'priya.mehta@gov.in', 'gov123'),
                           const SizedBox(height: 4),
                           _credRow('Govt', 'ravi.kumar@gov.in', 'gov123'),
+                          const SizedBox(height: 4),
+                          _credRow('Contractor', 'rajesh.contractor@builder.in', 'contract123'),
                         ],
                       ),
                     ),
@@ -465,6 +524,57 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           borderSide: const BorderSide(color: Colors.redAccent, width: 1.8),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+    );
+  }
+
+  Widget _buildRoleSelector({
+    required String role,
+    required String label,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedRole == role;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedRole = role),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor : const Color(0xFFF8FAFB),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200,
+            width: 1.5,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

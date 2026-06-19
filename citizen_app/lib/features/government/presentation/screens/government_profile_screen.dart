@@ -75,7 +75,20 @@ class _GovernmentProfileScreenState extends State<GovernmentProfileScreen> {
     const primaryOrange = Color(0xFFF4511E);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF4F8FF),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF263238), size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'My Profile',
+          style: TextStyle(color: Color(0xFF263238), fontWeight: FontWeight.bold),
+        ),
+      ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator(color: primaryOrange))
         : SingleChildScrollView(
@@ -87,9 +100,9 @@ class _GovernmentProfileScreenState extends State<GovernmentProfileScreen> {
                   children: [
                     // Gradient Background
                     Container(
-                      height: 220,
+                      height: 150,
                       margin: const EdgeInsets.only(bottom: 50),
-                      padding: const EdgeInsets.only(top: 50, left: 20, right: 20),
+                      padding: const EdgeInsets.only(left: 20, right: 20),
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           colors: [primaryOrange, Color(0xFFD84315)],
@@ -102,7 +115,7 @@ class _GovernmentProfileScreenState extends State<GovernmentProfileScreen> {
                         ),
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
@@ -179,7 +192,7 @@ class _GovernmentProfileScreenState extends State<GovernmentProfileScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     children: [
-            const SizedBox(height: 36),
+            const SizedBox(height: 24),
 
             // Form inputs
             FadeInUp(

@@ -28,7 +28,7 @@ class AuthRepository {
     }
   }
 
-  Future<User> register(String name, String email, String password) async {
+  Future<User> register(String name, String email, String password, {String role = 'citizen'}) async {
     try {
       final response = await _dio.post(
         ApiConstants.register,
@@ -36,15 +36,18 @@ class AuthRepository {
           'name': name,
           'email': email,
           'password': password,
-          'role': 'citizen',
+          'role': role,
         },
       );
       final user = User.fromJson(response.data);
-      // Backend Might not return token on register, but if it does:
+      final prefs = await SharedPreferences.getInstance();
       if (user.token != null) {
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', user.token!);
       }
+      await prefs.setString('user_name', user.name);
+      await prefs.setString('user_id', user.id);
+      await prefs.setString('user_email', user.email);
+      await prefs.setString('user_role', user.role);
       return user;
     } catch (e) {
       rethrow;
@@ -57,5 +60,20 @@ class AuthRepository {
     await prefs.remove('user_name');
     await prefs.remove('user_id');
     await prefs.remove('user_role');
+  }
+
+  Future<User> getProfile() async {
+    try {
+      final response = await _dio.get(ApiConstants.profile);
+      final user = User.fromJson(response.data);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_name', user.name);
+      await prefs.setString('user_id', user.id);
+      await prefs.setString('user_email', user.email);
+      await prefs.setString('user_role', user.role);
+      return user;
+    } catch (e) {
+      rethrow;
+    }
   }
 }

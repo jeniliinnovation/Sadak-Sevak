@@ -36,6 +36,14 @@ const connectDB = async () => {
     // 2. Connect with Sequelize
     await sequelize.authenticate();
     console.log('MySQL connected successfully.');
+
+    // Dynamically ensure status column exists in MySQL table
+    try {
+      await sequelize.query("ALTER TABLE bids ADD COLUMN status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending'");
+      console.log('Successfully ensured status column exists in bids table.');
+    } catch (err) {
+      // Ignored if column already exists
+    }
   } catch (error) {
     console.error('Unable to connect to the database:', error);
     process.exit(1);

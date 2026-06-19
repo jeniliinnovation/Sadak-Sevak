@@ -40,12 +40,27 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _determinePosition() async {
     try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
-        final pos = await Geolocator.getCurrentPosition();
+        Position pos;
+        try {
+          pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 4),
+          );
+        } catch (_) {
+          // Fallback to low accuracy if high accuracy times out/fails on Web
+          pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+            timeLimit: const Duration(seconds: 4),
+          );
+        }
         if (mounted) {
           final userLoc = LatLng(pos.latitude, pos.longitude);
           setState(() {
@@ -57,7 +72,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error getting position on map: $e');
     }
   }
 
@@ -92,6 +107,8 @@ class _MapScreenState extends State<MapScreen> {
           );
           return dist <= 5000;
         }).toList();
+      } else {
+        filtered = [];
       }
     } else if (_selectedCategory != 'All') {
       String catVal = _selectedCategory.toLowerCase();
@@ -113,7 +130,6 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          _buildDebugOverlay(),
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(

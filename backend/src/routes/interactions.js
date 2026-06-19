@@ -114,6 +114,8 @@ router.get('/complaints/:id/comments', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+const { sendNotification } = require('../utils/notifications');
+
 router.post('/complaints/:id/comments', protect, authorize('citizen', 'government', 'department_head', 'team_member', 'admin'), async (req, res) => {
   try {
     const { content } = req.body;
@@ -130,6 +132,29 @@ router.post('/complaints/:id/comments', protect, authorize('citizen', 'governmen
     const io = req.app.get('io');
     if (io) {
       io.to(req.params.id).emit('newMessage', fullComment);
+
+      // Create notification entry & push live update
+      const complaint = await Complaint.findByPk(req.params.id);
+      if (complaint) {
+        if (complaint.citizenId && complaint.citizenId !== req.user.id) {
+          await sendNotification(
+            io,
+            complaint.citizenId,
+            'New Message',
+            `New message in "${complaint.title}": ${content}`,
+            'comment'
+          );
+        }
+        if (complaint.assignedTeamId && complaint.assignedTeamId !== req.user.id) {
+          await sendNotification(
+            io,
+            complaint.assignedTeamId,
+            'New Message',
+            `New message in "${complaint.title}": ${content}`,
+            'comment'
+          );
+        }
+      }
     }
 
     res.status(201).json(fullComment);

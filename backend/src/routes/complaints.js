@@ -33,7 +33,7 @@ const { enrichLocation } = require('../utils/locationService');
  */
 router.post('/', protect, authorize('citizen'), async (req, res) => {
   try {
-    const { title, description, location, media } = req.body;
+    const { title, description, location, media, category, priority } = req.body;
     
     // SARA Enrichment (Async DB Query)
     const enrichedLocation = await enrichLocation(location.lat, location.lng);
@@ -54,7 +54,9 @@ router.post('/', protect, authorize('citizen'), async (req, res) => {
       media: mediaArray,
       location: enrichedLocation,
       citizenId: req.user.id,
-      status: 'submitted'
+      status: 'submitted',
+      category: category || 'Pothole',
+      priority: priority || 'Medium'
     });
     res.status(201).json(complaint);
   } catch (error) { res.status(400).json({ error: error.message }); }
@@ -165,12 +167,42 @@ router.get('/:id', async (req, res) => {
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 
-router.put('/:id/status', protect, authorize('admin', 'department_head', 'team_member'), async (req, res) => {
+const { sendNotification } = require('../utils/notifications');
+
+router.put('/:id/status', protect, authorize('admin', 'department_head', 'team_member', 'contractor'), async (req, res) => {
   try {
     const complaint = await Complaint.findByPk(req.params.id);
     if (!complaint) return res.status(404).json({ error: 'Not found' });
+    
     complaint.status = req.body.status;
     await complaint.save();
+
+    // Create notifications and send live
+    const io = req.app.get('io');
+    if (io) {
+      const statusText = req.body.status.replace('_', ' ');
+      // Notify the citizen
+      if (complaint.citizenId) {
+        await sendNotification(
+          io,
+          complaint.citizenId,
+          'Complaint Status Update',
+          `Your report "${complaint.title}" status is now "${statusText}".`,
+          'status_update'
+        );
+      }
+      // Notify the assigned team member
+      if (complaint.assignedTeamId) {
+        await sendNotification(
+          io,
+          complaint.assignedTeamId,
+          'Task Status Update',
+          `Your task "${complaint.title}" status has changed to "${statusText}".`,
+          'status_update'
+        );
+      }
+    }
+
     res.json(complaint);
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
@@ -204,6 +236,39 @@ router.post('/:id/reopen', protect, authorize('citizen'), async (req, res) => {
     await complaint.save();
     res.json({ message: 'Complaint reopened', complaint });
   } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+/**
+ * @swagger
+ * /api/complaints/stats/by-status:
+ *   get:
+ *     summary: Get complaint statistics by status
+ *     tags: [Complaints]
+ */
+router.get('/stats/by-status', async (req, res) => {
+  try {
+    const { sequelize } = require('../config/db');
+    const { Op } = require('sequelize');
+
+    const stats = await Complaint.findAll({
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['status'],
+      raw: true
+    });
+
+    res.json({
+      pending: stats.find(s => ['submitted', 'under_review', 'pending', 'escalated'].includes(s.status))?.count || 0,
+      inProgress: stats.find(s => ['team_assigned', 'repair_started', 'repair_in_progress'].includes(s.status))?.count || 0,
+      complete: stats.find(s => ['repair_completed', 'verified_closed'].includes(s.status))?.count || 0,
+      allStatuses: stats
+    });
+  } catch (error) { 
+    console.error('Error fetching complaint stats:', error);
+    res.status(500).json({ error: error.message }); 
+  }
 });
 
 router.get('/', async (req, res) => {
