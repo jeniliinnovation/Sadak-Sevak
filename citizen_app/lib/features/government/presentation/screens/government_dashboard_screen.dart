@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 
 import 'package:sadak_sevak_citizen/features/government/data/government_repository.dart';
 import 'package:sadak_sevak_citizen/features/government/domain/models/analytics_model.dart';
+import 'package:sadak_sevak_citizen/features/government/presentation/screens/government_notifications_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -139,7 +140,14 @@ class _GovernmentDashboardScreenState extends State<GovernmentDashboardScreen> {
                               Icons.notifications_none_rounded,
                               color: Colors.white,
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const GovernmentNotificationsScreen(),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],

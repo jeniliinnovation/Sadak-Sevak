@@ -9,11 +9,48 @@ import 'task_history_screen.dart';
 import 'field_team_settings_screen.dart';
 import 'help_and_support_screen.dart';
 
-class FieldTeamProfileScreen extends StatelessWidget {
+class FieldTeamProfileScreen extends StatefulWidget {
   const FieldTeamProfileScreen({super.key});
 
+  @override
+  State<FieldTeamProfileScreen> createState() => _FieldTeamProfileScreenState();
+}
+
+class _FieldTeamProfileScreenState extends State<FieldTeamProfileScreen> {
+  final _authRepo = AuthRepository();
   static const Color _blue = Color(0xFF4A80F0);
   static const Color _darkBlue = Color(0xFF0D47A1);
+
+  Future<void> _handleLogout() async {
+    bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _authRepo.logout();
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -228,15 +265,7 @@ class FieldTeamProfileScreen extends StatelessWidget {
                       icon: Icons.logout_rounded,
                       title: 'Logout',
                       color: Colors.red,
-                      onTap: () async {
-                        await AuthRepository().logout();
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AuthScreen()),
-                          (route) => false,
-                        );
-                      },
+                      onTap: _handleLogout,
                     ),
                   ],
                 ),

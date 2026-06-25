@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react'
 
 const AuthContext = createContext(null)
 
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
 // Super Admin has FULL ACCESS to all features
 const SUPER_ADMIN_PERMISSIONS = {
   dashboard: true,
@@ -66,7 +68,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

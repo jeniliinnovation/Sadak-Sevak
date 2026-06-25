@@ -9,6 +9,7 @@ import 'package:sadak_sevak_citizen/features/auth/domain/user_model.dart';
 import 'package:sadak_sevak_citizen/features/complaints/domain/complaint_model.dart';
 import 'package:sadak_sevak_citizen/features/government/data/government_repository.dart';
 import 'package:sadak_sevak_citizen/features/complaints/presentation/screens/complaint_chat_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GovernmentComplaintDetailsScreen extends StatefulWidget {
   final Complaint complaint;
@@ -32,6 +33,16 @@ class _GovernmentComplaintDetailsScreenState
   String? _selectedTeamId;
   String? _previousAssignedTeam;
   bool _isAssigning = false;
+  bool _mapInteractive = false;
+
+  Future<void> _openMaps() async {
+    final lat = _complaint.latitude == 0.0 ? 22.3039 : _complaint.latitude;
+    final lng = _complaint.longitude == 0.0 ? 70.8022 : _complaint.longitude;
+    final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    }
+  }
 
   bool get _isCompleted {
     final lower = _complaint.status.toLowerCase();
@@ -1109,33 +1120,56 @@ class _GovernmentComplaintDetailsScreenState
   }
 
   Widget _buildLocationSection() {
+    const primaryOrange = Color(0xFFF4511E);
     final address =
         _complaint.location['address'] ?? 'Address details not available';
     final lat = _complaint.latitude == 0.0 ? 22.3039 : _complaint.latitude;
     final lng = _complaint.longitude == 0.0 ? 70.8022 : _complaint.longitude;
+    final complaintPoint = LatLng(lat, lng);
 
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'LOCATION',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: Colors.grey,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'LOCATION',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: Colors.grey,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _openMaps,
+                icon: const Icon(
+                  Icons.directions_rounded,
+                  size: 16,
+                  color: primaryOrange,
+                ),
+                label: const Text(
+                  'Directions',
+                  style: TextStyle(
+                    color: primaryOrange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Icon(
                 Icons.location_on_rounded,
                 size: 20,
-                color: Color(0xFFF4511E),
+                color: primaryOrange,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1152,40 +1186,136 @@ class _GovernmentComplaintDetailsScreenState
           ),
           const SizedBox(height: 16),
           Container(
-            height: 200,
+            height: _mapInteractive ? 320 : 200,
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(
+                color: _mapInteractive ? primaryOrange : Colors.grey.shade200,
+                width: _mapInteractive ? 2 : 1,
+              ),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: LatLng(lat, lng),
-                  initialZoom: 14.5,
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.none,
-                  ),
-                ),
+              child: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.sadaksevak.citizen',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(lat, lng),
-                        child: const Icon(
-                          Icons.location_on_rounded,
-                          color: Color(0xFFF4511E),
-                          size: 40,
-                        ),
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter: complaintPoint,
+                      initialZoom: 14.5,
+                      interactionOptions: InteractionOptions(
+                        flags: _mapInteractive
+                            ? InteractiveFlag.all
+                            : InteractiveFlag.none,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.sadaksevak.citizen',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: complaintPoint,
+                            child: const Icon(
+                              Icons.location_on_rounded,
+                              color: primaryOrange,
+                              size: 40,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  if (!_mapInteractive)
+                    GestureDetector(
+                      onTap: () => setState(() => _mapInteractive = true),
+                      child: Container(
+                        color: Colors.transparent,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.touch_app_rounded,
+                                  size: 16,
+                                  color: primaryOrange,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Tap to interact',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryOrange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_mapInteractive)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _mapInteractive = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lock_outline_rounded,
+                                size: 13,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Done',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { API_BASE } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -98,7 +99,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
