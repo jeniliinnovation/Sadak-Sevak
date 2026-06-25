@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Search, CheckCircle, AlertCircle, UserCheck, ShieldAlert, Key, ToggleLeft, ToggleRight, X } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, CheckCircle, AlertCircle, UserCheck, ShieldAlert, Key, ToggleLeft, ToggleRight, X, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // Rich set of mock users to populate tabs if backend data is empty or sparse
@@ -22,6 +22,9 @@ function UserManagement() {
   // Search & Filtering State
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('staff') // staff, contractors, citizens, requests
+  const [roleFilter, setRoleFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [ekycFilter, setEkycFilter] = useState('')
   
   // Add User Modal State
   const [showAddModal, setShowAddModal] = useState(false)
@@ -187,13 +190,31 @@ function UserManagement() {
 
     // Tab Filters
     if (activeTab === 'staff') {
-      return u.role === 'admin' || u.role === 'department_head' || u.role === 'team_member' || u.role === 'super_admin'
+      const isStaff = u.role === 'admin' || u.role === 'department_head' || u.role === 'team_member' || u.role === 'super_admin'
+      if (!isStaff) return false
+      if (roleFilter && u.role !== roleFilter) return false
     } else if (activeTab === 'contractors') {
-      return u.role === 'contractor'
+      const isContractor = u.role === 'contractor'
+      if (!isContractor) return false
     } else if (activeTab === 'citizens') {
-      return u.role === 'citizen' || u.role === 'user'
+      const isCitizen = u.role === 'citizen' || u.role === 'user'
+      if (!isCitizen) return false
     } else if (activeTab === 'requests') {
-      return u.isVerified === false || u.eKycStatus?.toLowerCase().includes('pending')
+      const isRequest = u.isVerified === false || u.eKycStatus?.toLowerCase().includes('pending')
+      if (!isRequest) return false
+    }
+
+    // Status Filter
+    if (statusFilter) {
+      const wantActive = statusFilter === 'active'
+      if (u.isVerified !== wantActive) return false
+    }
+
+    // eKYC Filter
+    if (ekycFilter) {
+      const isVerifiedKyc = u.eKycStatus === 'Verified'
+      if (ekycFilter === 'verified' && !isVerifiedKyc) return false
+      if (ekycFilter === 'pending' && isVerifiedKyc) return false
     }
     
     return true
@@ -269,7 +290,7 @@ function UserManagement() {
       {/* Tab Navigation */}
       <div style={{ display: 'flex', borderBottom: '1px solid #CFD8DC', marginTop: '25px', gap: '8px' }}>
         <button 
-          onClick={() => { setActiveTab('staff'); setSearchTerm(''); }}
+          onClick={() => { setActiveTab('staff'); setSearchTerm(''); setRoleFilter(''); setStatusFilter(''); setEkycFilter(''); }}
           style={{
             padding: '12px 18px',
             border: 'none',
@@ -285,7 +306,7 @@ function UserManagement() {
           Staff Directory ({totalStaff})
         </button>
         <button 
-          onClick={() => { setActiveTab('contractors'); setSearchTerm(''); }}
+          onClick={() => { setActiveTab('contractors'); setSearchTerm(''); setRoleFilter(''); setStatusFilter(''); setEkycFilter(''); }}
           style={{
             padding: '12px 18px',
             border: 'none',
@@ -301,7 +322,7 @@ function UserManagement() {
           Municipal Contractors ({totalContractors})
         </button>
         <button 
-          onClick={() => { setActiveTab('citizens'); setSearchTerm(''); }}
+          onClick={() => { setActiveTab('citizens'); setSearchTerm(''); setRoleFilter(''); setStatusFilter(''); setEkycFilter(''); }}
           style={{
             padding: '12px 18px',
             border: 'none',
@@ -317,7 +338,7 @@ function UserManagement() {
           City Citizens ({totalCitizens})
         </button>
         <button 
-          onClick={() => { setActiveTab('requests'); setSearchTerm(''); }}
+          onClick={() => { setActiveTab('requests'); setSearchTerm(''); setRoleFilter(''); setStatusFilter(''); setEkycFilter(''); }}
           style={{
             padding: '12px 18px',
             border: 'none',
@@ -342,17 +363,75 @@ function UserManagement() {
         </button>
       </div>
 
-      {/* Search Bar Panel */}
-      <div className="panel" style={{ borderRadius: '0', border: '1px solid #CFD8DC', borderTop: 'none', background: '#F8F9FA', padding: '15px' }}>
-        <div style={{ position: 'relative', maxWidth: '400px' }}>
-          <input 
-            type="search" 
-            placeholder={`Search within ${activeTab.toUpperCase()} registry...`} 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px' }} 
-          />
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#78909C' }} />
+      {/* Search & Filters Panel */}
+      <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px', borderRadius: '0', border: '1px solid #CFD8DC', borderTop: 'none', background: '#F8F9FA', padding: '15px' }}>
+        <div className="filters-row">
+          <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+            <div className="filters-row__search-icon">
+              <Search size={18} />
+            </div>
+            <input 
+              type="text"
+              className="input-search"
+              placeholder={`Search within ${activeTab.toUpperCase()} registry...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ maxWidth: '100%' }}
+            />
+          </div>
+
+          <div className="filters-row__group">
+            {activeTab === 'staff' && (
+              <select
+                className="filter-select filter-select--role"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                <option value="">All Staff Roles</option>
+                <option value="admin">System Admin</option>
+                <option value="department_head">Department Head</option>
+                <option value="team_member">Field Operations Officer</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            )}
+
+            <select
+              className="filter-select filter-select--status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+
+            <select
+              className="filter-select filter-select--category"
+              value={ekycFilter}
+              onChange={(e) => setEkycFilter(e.target.value)}
+            >
+              <option value="">All e-KYC</option>
+              <option value="verified">Verified</option>
+              <option value="pending">Pending</option>
+            </select>
+
+            {(searchTerm || roleFilter || statusFilter || ekycFilter) && (
+              <button 
+                className="button button--secondary button--reset" 
+                onClick={() => {
+                  setSearchTerm('')
+                  setRoleFilter('')
+                  setStatusFilter('')
+                  setEkycFilter('')
+                }}
+                title="Reset Filters"
+                type="button"
+                style={{ height: '46px' }}
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

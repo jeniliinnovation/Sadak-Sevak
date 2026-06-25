@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { 
   Search, Download, ShieldCheck, RefreshCw, AlertTriangle, 
-  Shield, CheckCircle, FileSpreadsheet, FileDown, Calendar 
+  Shield, CheckCircle, FileSpreadsheet, FileDown, Calendar, RotateCcw
 } from 'lucide-react'
 
 // Rich set of mock logs to ensure display even if backend has empty logs list
@@ -393,26 +393,28 @@ function SystemAuditLogs() {
         </div>
       </div>
 
-      {/* Advanced Filter Box */}
-      <div className="panel" style={{ marginBottom: '20px', border: '1px solid #CFD8DC' }}>
-        <div className="panel__body" style={{ padding: '16px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-          
-          <div style={{ flex: '1 1 250px', position: 'relative' }}>
+      {/* Modern Search & Filters Panel */}
+      <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px', border: '1px solid #CFD8DC' }}>
+        <div className="filters-row">
+          <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+            <div className="filters-row__search-icon">
+              <Search size={18} />
+            </div>
             <input 
-              type="search" 
-              placeholder="Search by User Email, Action, Resource, IP..." 
+              type="text"
+              className="input-search"
+              placeholder="Search by user email, action, resource, IP..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px' }} 
+              style={{ maxWidth: '100%' }}
             />
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#78909C' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flex: '1 1 300px' }}>
-            <select 
+          <div className="filters-row__group">
+            <select
+              className="filter-select filter-select--category"
               value={selectedAction}
               onChange={(e) => { setSelectedAction(e.target.value); setCurrentPage(1); }}
-              style={{ flex: 1, padding: '10px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px', background: 'white' }}
             >
               <option value="All">All Categories</option>
               <option value="Login">Login Audits</option>
@@ -422,27 +424,34 @@ function SystemAuditLogs() {
               <option value="Security">Security Alerts</option>
             </select>
 
-            <select 
+            <select
+              className="filter-select filter-select--priority"
               value={selectedSeverity}
               onChange={(e) => { setSelectedSeverity(e.target.value); setCurrentPage(1); }}
-              style={{ flex: 1, padding: '10px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px', background: 'white' }}
             >
               <option value="All">All Severities</option>
               <option value="Info">Info Level</option>
               <option value="Warning">Warning Level</option>
               <option value="Critical">Critical Alert</option>
             </select>
+
+            {(searchTerm || selectedAction !== 'All' || selectedSeverity !== 'All') && (
+              <button 
+                className="button button--secondary button--reset" 
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedAction('All')
+                  setSelectedSeverity('All')
+                  setCurrentPage(1)
+                }}
+                title="Reset Filters"
+                type="button"
+                style={{ height: '46px' }}
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            )}
           </div>
-
-          {(searchTerm || selectedAction !== 'All' || selectedSeverity !== 'All') && (
-            <button 
-              onClick={() => { setSearchTerm(''); setSelectedAction('All'); setSelectedSeverity('All'); setCurrentPage(1); }} 
-              style={{ border: 'none', background: 'none', color: '#0A2F7E', textDecoration: 'underline', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
-            >
-              Reset Filters
-            </button>
-          )}
-
         </div>
       </div>
 

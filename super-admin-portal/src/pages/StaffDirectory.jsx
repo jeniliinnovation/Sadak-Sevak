@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Save, Search, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const ROLE_OPTIONS = ['admin', 'department_head', 'team_member', 'contractor']
@@ -75,11 +75,27 @@ function StaffDirectory() {
     } catch (error) { console.error('Add error:', error) }
   }
 
-  const filtered = staff.filter(s =>
-    !search || (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.role || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const [roleFilter, setRoleFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  const filtered = staff.filter(s => {
+    const matchesSearch = !search || 
+      (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.role || '').toLowerCase().includes(search.toLowerCase())
+      
+    if (!matchesSearch) return false
+
+    if (roleFilter && s.role !== roleFilter) return false
+    
+    if (statusFilter) {
+      const isActive = s.isVerified !== false
+      const wantActive = statusFilter === 'active'
+      if (isActive !== wantActive) return false
+    }
+
+    return true
+  })
 
   return (
     <div>
@@ -90,12 +106,66 @@ function StaffDirectory() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-        <input type="search" placeholder="Search staff..." value={search} onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px' }} />
-        <button className="button button--primary" onClick={() => setShowAdd(!showAdd)}>
-          {showAdd ? <><X size={18} /> Cancel</> : <><Plus size={18} /> Add Staff</>}
-        </button>
+      {/* Modern Search & Filters Panel */}
+      <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px' }}>
+        <div className="filters-row">
+          <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+            <div className="filters-row__search-icon">
+              <Search size={18} />
+            </div>
+            <input 
+              type="text"
+              className="input-search"
+              placeholder="Search name, email, role..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ maxWidth: '100%' }}
+            />
+          </div>
+
+          <div className="filters-row__group">
+            <select
+              className="filter-select filter-select--role"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
+              <option value="">All Roles</option>
+              {ROLE_OPTIONS.map(role => (
+                <option key={role} value={role}>{role.replace('_', ' ')}</option>
+              ))}
+            </select>
+
+            <select
+              className="filter-select filter-select--status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            {(search || roleFilter || statusFilter) && (
+              <button 
+                className="button button--secondary button--reset" 
+                onClick={() => {
+                  setSearch('')
+                  setRoleFilter('')
+                  setStatusFilter('')
+                }}
+                title="Reset Filters"
+                type="button"
+                style={{ height: '46px' }}
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            )}
+
+            <button className="button button--primary" onClick={() => setShowAdd(!showAdd)} style={{ height: '46px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {showAdd ? <><X size={18} /> Cancel</> : <><Plus size={18} /> Add Staff</>}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Add Staff Form */}

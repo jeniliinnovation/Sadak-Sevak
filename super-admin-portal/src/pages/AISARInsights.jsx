@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { StatCard } from '../components/Widgets'
 import { useAuth } from '../context/AuthContext'
-import { Brain, Sliders, ShieldCheck, PlayCircle, Terminal, AlertTriangle, Check, RefreshCw } from 'lucide-react'
+import { Brain, Sliders, ShieldCheck, PlayCircle, Terminal, AlertTriangle, Check, RefreshCw, Search, RotateCcw } from 'lucide-react'
 
 // Mock AI detections registry data
 const initialMockDetections = [
@@ -26,6 +26,27 @@ function AISARInsights() {
   const [scanProgress, setScanProgress] = useState(0)
   const [telemetryLogs, setTelemetryLogs] = useState([])
   const [detectedTargets, setDetectedTargets] = useState([])
+
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [severityFilter, setSeverityFilter] = useState('')
+
+  const types = Array.from(new Set(detections.map(d => d.type.split(' ')[0]).filter(Boolean)))
+
+  const filteredDetections = detections.filter(d => {
+    const matchesSearch = !search ||
+      d.id.toLowerCase().includes(search.toLowerCase()) ||
+      d.type.toLowerCase().includes(search.toLowerCase()) ||
+      d.location.toLowerCase().includes(search.toLowerCase())
+      
+    if (!matchesSearch) return false
+
+    if (typeFilter && !d.type.toLowerCase().includes(typeFilter.toLowerCase())) return false
+    
+    if (severityFilter && d.severity !== severityFilter) return false
+
+    return true
+  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -368,10 +389,69 @@ function AISARInsights() {
             </div>
           </div>
 
+          {/* Modern Search & Filters Panel */}
+          <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px', border: '1px solid #CFD8DC' }}>
+            <div className="filters-row">
+              <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+                <div className="filters-row__search-icon">
+                  <Search size={18} />
+                </div>
+                <input 
+                  type="text"
+                  className="input-search"
+                  placeholder="Search ID, type, location..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ maxWidth: '100%' }}
+                />
+              </div>
+
+              <div className="filters-row__group">
+                <select
+                  className="filter-select filter-select--type"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                  <option value="">All Types</option>
+                  {types.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+
+                <select
+                  className="filter-select filter-select--status"
+                  value={severityFilter}
+                  onChange={(e) => setSeverityFilter(e.target.value)}
+                >
+                  <option value="">All Severities</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+
+                {(search || typeFilter || severityFilter) && (
+                  <button 
+                    className="button button--secondary button--reset" 
+                    onClick={() => {
+                      setSearch('')
+                      setTypeFilter('')
+                      setSeverityFilter('')
+                    }}
+                    title="Reset Filters"
+                    type="button"
+                    style={{ height: '46px' }}
+                  >
+                    <RotateCcw size={16} /> Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Detections Registry Log Table */}
           <div className="panel" style={{ border: '1px solid #CFD8DC' }}>
             <div className="panel__header">
-              <h2>Recent AI Damage Identifications</h2>
+              <h2>Recent AI Damage Identifications ({filteredDetections.length})</h2>
             </div>
             <div className="panel__body panel__table-wrap" style={{ padding: '0' }}>
               <table className="data-table">
@@ -389,7 +469,9 @@ function AISARInsights() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Loading telemetry database...</td></tr>
-                  ) : detections.map((d) => {
+                  ) : filteredDetections.length === 0 ? (
+                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#78909C' }}>No AI detections found matching selection.</td></tr>
+                  ) : filteredDetections.map((d) => {
                     const isVerified = d.status.startsWith('Verified')
                     return (
                       <tr key={d.id}>

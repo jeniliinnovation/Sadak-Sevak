@@ -28,7 +28,7 @@ function Settings() {
   const [sessionTimeout, setSessionTimeout] = useState('30')
   const [enforceMfa, setEnforceMfa] = useState(false)
 
-  const [apiUrl, setApiUrl] = useState('http://localhost:5000/api')
+  const [apiUrl, setApiUrl] = useState('http://jenili.in/api')
   const [showToken, setShowToken] = useState(false)
 
   const categories = [

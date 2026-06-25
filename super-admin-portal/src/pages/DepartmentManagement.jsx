@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Save, Search, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 function DepartmentManagement() {
@@ -80,11 +80,25 @@ function DepartmentManagement() {
     } catch (error) { console.error('Add error:', error) }
   }
 
-  const filtered = departments.filter(d =>
-    !search || (d.companyName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (d.specialization || '').toLowerCase().includes(search.toLowerCase()) ||
-    (d.contactPerson || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const [specializationFilter, setSpecializationFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  const specializations = Array.from(new Set(departments.map(d => d.specialization).filter(Boolean)))
+
+  const filtered = departments.filter(d => {
+    const matchesSearch = !search || 
+      (d.companyName || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.specialization || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.contactPerson || '').toLowerCase().includes(search.toLowerCase())
+      
+    if (!matchesSearch) return false
+
+    if (specializationFilter && d.specialization !== specializationFilter) return false
+    
+    if (statusFilter && (d.status || 'pending').toLowerCase() !== statusFilter.toLowerCase()) return false
+
+    return true
+  })
 
   return (
     <div>
@@ -95,12 +109,68 @@ function DepartmentManagement() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-        <input type="search" placeholder="Search departments..." value={search} onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px' }} />
-        <button className="button button--primary" onClick={() => setShowAdd(!showAdd)}>
-          {showAdd ? <><X size={18} /> Cancel</> : <><Plus size={18} /> Add Department</>}
-        </button>
+      {/* Modern Search & Filters Panel */}
+      <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px' }}>
+        <div className="filters-row">
+          <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+            <div className="filters-row__search-icon">
+              <Search size={18} />
+            </div>
+            <input 
+              type="text"
+              className="input-search"
+              placeholder="Search name, specialization, contact..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ maxWidth: '100%' }}
+            />
+          </div>
+
+          <div className="filters-row__group">
+            <select
+              className="filter-select filter-select--specialization"
+              value={specializationFilter}
+              onChange={(e) => setSpecializationFilter(e.target.value)}
+            >
+              <option value="">All Specializations</option>
+              {specializations.map(spec => (
+                <option key={spec} value={spec}>{spec}</option>
+              ))}
+            </select>
+
+            <select
+              className="filter-select filter-select--status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="active">Active</option>
+              <option value="rejected">Rejected</option>
+            </select>
+
+            {(search || specializationFilter || statusFilter) && (
+              <button 
+                className="button button--secondary button--reset" 
+                onClick={() => {
+                  setSearch('')
+                  setSpecializationFilter('')
+                  setStatusFilter('')
+                }}
+                title="Reset Filters"
+                type="button"
+                style={{ height: '46px' }}
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            )}
+
+            <button className="button button--primary" onClick={() => setShowAdd(!showAdd)} style={{ height: '46px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {showAdd ? <><X size={18} /> Cancel</> : <><Plus size={18} /> Add Department</>}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Add Form */}

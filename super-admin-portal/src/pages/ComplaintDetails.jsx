@@ -485,7 +485,7 @@ function ComplaintDetails() {
                 const imageUrl = rawUrl.startsWith('http') 
                   ? rawUrl 
                   : (rawUrl.startsWith('uploads') || rawUrl.startsWith('/uploads')
-                      ? `http://localhost:5000${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`
+                      ? `http://jenili.in${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`
                       : rawUrl)
                 return (
                   <div 

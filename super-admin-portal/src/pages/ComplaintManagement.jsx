@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit, Trash2, X, Save } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, X, Save, RotateCcw } from 'lucide-react'
 import { StatusBadge } from '../components/Widgets'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
@@ -87,11 +87,29 @@ function ComplaintManagement() {
     } catch (error) { console.error('Update error:', error) }
   }
 
-  const filtered = complaints.filter(c =>
-    !search || (c.title || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.category || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.status || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const [statusFilter, setStatusFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+
+  const categories = Array.from(new Set(complaints.map(c => c.category || 'General').filter(Boolean)))
+
+  const filtered = complaints.filter(c => {
+    const matchesSearch = !search || 
+      (c.title || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.category || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.status || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.id || '').toLowerCase().includes(search.toLowerCase())
+      
+    if (!matchesSearch) return false
+
+    if (categoryFilter && (c.category || 'General') !== categoryFilter) return false
+    
+    if (statusFilter && c.status !== statusFilter) return false
+    
+    if (priorityFilter && (c.priority || 'Medium').toLowerCase() !== priorityFilter.toLowerCase()) return false
+
+    return true
+  })
 
   return (
     <div>
@@ -102,11 +120,74 @@ function ComplaintManagement() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-          <input type="search" placeholder="Search complaints..." value={search} onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px 8px 36px', border: '1px solid #ccc', borderRadius: '6px' }} />
+      {/* Modern Search & Filters Panel */}
+      <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px' }}>
+        <div className="filters-row">
+          <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+            <div className="filters-row__search-icon">
+              <Search size={18} />
+            </div>
+            <input 
+              type="text"
+              className="input-search"
+              placeholder="Search ID, title, category, status..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ maxWidth: '100%' }}
+            />
+          </div>
+
+          <div className="filters-row__group">
+            <select
+              className="filter-select filter-select--category"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            <select
+              className="filter-select filter-select--status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              {STATUS_OPTIONS.map(status => (
+                <option key={status} value={status}>{status.replace('_', ' ')}</option>
+              ))}
+            </select>
+
+            <select
+              className="filter-select filter-select--priority"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="">All Priorities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+
+            {(search || categoryFilter || statusFilter || priorityFilter) && (
+              <button 
+                className="button button--secondary button--reset" 
+                onClick={() => {
+                  setSearch('')
+                  setCategoryFilter('')
+                  setStatusFilter('')
+                  setPriorityFilter('')
+                }}
+                title="Reset Filters"
+                type="button"
+                style={{ height: '46px' }}
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

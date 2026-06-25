@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Search, CheckSquare, ShieldCheck, DollarSign, Hammer, CheckCircle, Clipboard, X } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, CheckSquare, ShieldCheck, DollarSign, Hammer, CheckCircle, Clipboard, X, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // Rich set of initial mock projects to guarantee display if backend is empty
@@ -245,25 +245,28 @@ function InfrastructureProjects() {
         </div>
       </div>
 
-      {/* Advanced Filters Panel */}
-      <div className="panel" style={{ margin: '20px 0', border: '1px solid #CFD8DC' }}>
-        <div className="panel__body" style={{ padding: '16px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ flex: '1 1 250px', position: 'relative' }}>
+      {/* Modern Search & Filters Panel */}
+      <div className="panel panel--compact panel--toolbar" style={{ minHeight: 'auto', marginBottom: '20px', border: '1px solid #CFD8DC' }}>
+        <div className="filters-row">
+          <div className="filters-row__search" style={{ flex: '1 1 300px' }}>
+            <div className="filters-row__search-icon">
+              <Search size={18} />
+            </div>
             <input 
-              type="search" 
-              placeholder="Search by Project Title, Contractor, Ward..." 
+              type="text"
+              className="input-search"
+              placeholder="Search title, contractor, location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px' }} 
+              style={{ maxWidth: '100%' }}
             />
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#78909C' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flex: '1 1 300px' }}>
-            <select 
+          <div className="filters-row__group">
+            <select
+              className="filter-select filter-select--status"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{ flex: 1, padding: '10px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px', background: 'white' }}
             >
               <option value="All">All Statuses</option>
               <option value="Pending">Pending Assignment</option>
@@ -272,15 +275,31 @@ function InfrastructureProjects() {
               <option value="Completed">Completed</option>
             </select>
 
-            <select 
+            <select
+              className="filter-select filter-select--category"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              style={{ flex: 1, padding: '10px', border: '1px solid #CFD8DC', borderRadius: '6px', fontSize: '13px', background: 'white' }}
             >
               <option value="All">All Budgets</option>
               <option value="Major">Major Tenders (&gt; ₹5 Cr)</option>
               <option value="Minor">Minor Tenders (&lt; ₹5 Cr)</option>
             </select>
+
+            {(searchTerm || selectedStatus !== 'All' || selectedCategory !== 'All') && (
+              <button 
+                className="button button--secondary button--reset" 
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedStatus('All')
+                  setSelectedCategory('All')
+                }}
+                title="Reset Filters"
+                type="button"
+                style={{ height: '46px' }}
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            )}
           </div>
         </div>
       </div>
